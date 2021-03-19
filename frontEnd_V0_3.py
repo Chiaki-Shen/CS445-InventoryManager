@@ -206,7 +206,24 @@ def MainScreen(tab,root):
             display_Orders_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
+        
+    def mainPageQuery():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+                             FROM products
+                                INNER JOIN categories c on c.categoryName = products.category
+                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
+                             GROUP BY prodCode, vendor''')
+        records = c.fetchall()
 
+        for row in mainPageQuery_ContentTree.get_children():
+            mainPageQuery_ContentTree.delete(row)
+
+        for row in records:
+            print(row)
+            mainPageQuery_ContentTree.insert("", tk.END, values=row)
+            
     def queryVendorPrices():
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
@@ -870,6 +887,25 @@ def MainScreen(tab,root):
         display_VendorPrices_ContentTree.grid(row=0, column=0, padx=50, pady=20)
         root.geometry("1300x460")
 
+    def displayMainPageQueryWindowSetUp():
+        global tableOndisplay
+        tableOndisplay = treeCurrentdisplay("Product on Market", "")
+        global mainPageQuery_ContentTree
+        mainPageQuery_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings')
+        mainPageQuery_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
+        mainPageQuery_ContentTree.heading("#1", text="Vendor")
+        mainPageQuery_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.heading("#2", text="Category")
+        mainPageQuery_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.heading("#3", text="prodDesc")
+        mainPageQuery_ContentTree.column("#4", width=140, minwidth=100, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.heading("#4", text="Unit List Price")
+        mainPageQuery_ContentTree.column("#5", width=140, minwidth=100, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.heading("#5", text="Time Checked")
+
+        mainPageQuery_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+        root.geometry("1300x460")
+        
     # Main Screen Labels
     main_table_select_label = Label(mainOptionFrame, text="Choose Table")
     main_table_select_label.grid(row=1, column=0, pady=10, padx=1)
@@ -894,10 +930,9 @@ def MainScreen(tab,root):
     main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm)
     main_delete_button.grid(row=9, column=0, columnspan=2, pady=10, padx=1, ipadx=57)
 
-    # Initial display products
-    displayProductsWindowSetUp()
-    queryProducts()
-
+    # Initial display
+    displayMainPageQueryWindowSetUp()
+    mainPageQuery()
 
 
     # Commit our command
