@@ -207,15 +207,39 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
         
-    def mainPageQuery():
+    def mainPageQuery(opt = 'REGULAR'):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
-        c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+        if(opt == 'ALPHABETICAL'):
+            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
                              FROM products
                                 INNER JOIN categories c on c.categoryName = products.category
                                 INNER JOIN vendorPrices vP on products.prodCode = vP.product
-                             GROUP BY prodCode, vendor''')
-        records = c.fetchall()
+                             ORDER BY vendor''')
+            records = c.fetchall()
+        elif(opt == 'L2H'):
+            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+                            FROM products
+                                INNER JOIN categories c on c.categoryName = products.category
+                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
+                            GROUP BY prodCode, vendor
+                            ORDER BY unitListPrice''')
+            records = c.fetchall()
+        elif (opt == 'H2L'):
+            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+                            FROM products
+                                INNER JOIN categories c on c.categoryName = products.category
+                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
+                            GROUP BY prodCode, vendor
+                            ORDER BY unitListPrice DESC''')
+            records = c.fetchall()
+        else:
+            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+                            FROM products
+                                INNER JOIN categories c on c.categoryName = products.category
+                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
+                            GROUP BY prodCode, vendor''')
+            records = c.fetchall()
 
         for row in mainPageQuery_ContentTree.get_children():
             mainPageQuery_ContentTree.delete(row)
@@ -223,6 +247,7 @@ def MainScreen(tab,root):
         for row in records:
             print(row)
             mainPageQuery_ContentTree.insert("", tk.END, values=row)
+
             
     def queryVendorPrices():
         conn = sqlite3.connect('Hiccups.db')
@@ -934,7 +959,14 @@ def MainScreen(tab,root):
     displayMainPageQueryWindowSetUp()
     mainPageQuery()
 
-
+    # things to be implemented
+    # 1.need to be able to return to this query after look up other tables
+    # (DONE) 2.need to be able to query for specific requirements (ex. Low to High/ High to Low)
+    # 3.need to be able to execute the query command after user click on the colomn, s.t. if
+    #   user click on unit list price once, it will execute "mainPageQuery('L2H'), if user click on
+    #   unit price twice, it will execute "mainPageQuery('H2L') etc.
+    
+    
     # Commit our command
     conn.commit()
 
