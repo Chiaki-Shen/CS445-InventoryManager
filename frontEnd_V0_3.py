@@ -20,7 +20,6 @@ def MainScreen(tab,root):
     print(display1)
     '''
     global currentSelectedTable
-
     # main option frame declare
     mainOptionFrame = Frame(tab)
     mainOptionFrame.grid(row=0, column=1, padx=20, pady=(10, 0))
@@ -39,12 +38,15 @@ def MainScreen(tab,root):
     mainSortComboDropdown.current(0)
     mainSortComboDropdown.bind("<<ComboboxSelected>>")
     # print(mainComboDropdown.get())
-    mainSortComboDropdown.grid(row=6, column=1, pady=1, padx=1)
+    mainSortComboDropdown.grid(row=7, column=1, pady=1, padx=1)
 
     class treeCurrentdisplay:
         def __init__(self, currenttable, index):
             self.currentTable = currenttable
             self.index = index
+    class summaryDCFlag:
+        def __init__(self, flag):
+            self.flag = flag
     # addDataComandList in main Screen
     def addCommand():
         currentSelectedTable=mainComboDropdown.get()
@@ -61,30 +63,42 @@ def MainScreen(tab,root):
         elif (currentSelectedTable == "Vendor Price"):
             print("Yes Vendor Price Add is selected")
             vendorPricesAddWindowPopup()
-
+    def SummaryTreeRemove():
+        # if (tableOndisplay.currentTable == "Product on Market"):
+            # mainPageQuery_ContentTree.destroy()
+        try:
+            mainPageQuery_ContentTree.destroy()
+            print("Summary REMOVED !!")
+        except:
+            print("Summary tree not defined")
     def treeRemove():
         currentSelectedTable = mainComboDropdown.get()
         if (currentSelectedTable !="Products"):
             try:
                 display_Products_ContentTree.destroy()
+                print("ProductTree Gone")
             except:
                 print("Tree not defined")
         if (currentSelectedTable !="Orders"):
             try:
                 display_Orders_ContentTree.destroy()
+                print("OrderTree Gone")
             except:
                 print("Tree not defined")
         if (currentSelectedTable !="Vendor Price"):
             try:
                 display_VendorPrices_ContentTree.destroy()
+                print("VendorPriceTree Gone")
             except:
                 print("Tree not defined")
 
         if (currentSelectedTable !="Vendors"):
             try:
                 display_Vendors_ContentTree.destroy()
+                print("vendorTree Gone")
             except:
                 print("Tree not defined")
+
 
     # this called after user click a column and click edit in Main screen
     def editCommand():
@@ -109,12 +123,6 @@ def MainScreen(tab,root):
                 return 0
             print("In Edit table orders")
             ordersEditWindowPopup()
-        elif (tableOndisplay.currentTable == "vendorPrices"):
-            selectColumn = display_VendorPrices_ContentTree.focus()
-            if (selectColumn == ""):
-                return 0
-            print("In Edit table vendorPrices")
-            vendorPricesEditWindowPopup()
 
     # This def called after user confirm the changes
     def submitEditCommand():
@@ -124,10 +132,9 @@ def MainScreen(tab,root):
             submitEditVendor()
         elif (tableOndisplay.currentTable == "orders"):
             submitEditOrders()
-        elif (tableOndisplay.currentTable == "vendorPrices"):
-            submitEditVendorPrices()
 
     def displayCommand():
+        SummaryTreeRemove()
         currentSelectedTable = mainComboDropdown.get()
         print("In Display table " + currentSelectedTable)
         if (currentSelectedTable == "Products"):  # if dropdown selected table then
@@ -150,14 +157,37 @@ def MainScreen(tab,root):
             treeRemove()
             displayVendorPricesWindowSetUp()
             queryVendorPrices()
-
+    def backToSummaryDisplay():
+        try:
+            display_Products_ContentTree.destroy()
+        except:
+            print("Tree not defined")
+        try:
+            display_Orders_ContentTree.destroy()
+        except:
+            print("Tree not defined")
+        try:
+            display_VendorPrices_ContentTree.destroy()
+        except:
+            print("Tree not defined")
+        try:
+            display_Vendors_ContentTree.destroy()
+        except:
+            print("Tree not defined")
+        displayMainPageQueryWindowSetUp()
+        mainPageQuery()
 
     def sortCommand(): ####################### Comand list for sort in certain type ################################
-        return 0
+        currentSelectedSort = mainSortComboDropdown.get()
+        if currentSelectedSort == "Price: Low to High":
+            mainPageQuery("L2H")
+        elif currentSelectedSort == "Price: High to Low":
+            mainPageQuery("H2L")
+        elif currentSelectedSort == "Alphabetical":
+            mainPageQuery("ALPHABETICAL")
+        elif currentSelectedSort == "Newest":
+            mainPageQuery("Newest")
 
-
-    def avgGetterCommand(): ####################### Comand list for get average price form vendors ################################
-        return 0
 
     def queryProducts():
         conn = sqlite3.connect('Hiccups.db')
@@ -206,16 +236,23 @@ def MainScreen(tab,root):
             display_Orders_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
-        
+
     def mainPageQuery(opt = 'REGULAR'):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
-        if(opt == 'ALPHABETICAL'):
+        if (opt == 'ALPHABETICAL'):
             c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
                              FROM products
                                 INNER JOIN categories c on c.categoryName = products.category
                                 INNER JOIN vendorPrices vP on products.prodCode = vP.product
                              ORDER BY vendor''')
+            records = c.fetchall()
+        elif (opt == 'Newest'):
+            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+                             FROM products
+                                INNER JOIN categories c on c.categoryName = products.category
+                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
+                             ORDER BY timeChecked''')
             records = c.fetchall()
         elif(opt == 'L2H'):
             c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
@@ -248,7 +285,7 @@ def MainScreen(tab,root):
             print(row)
             mainPageQuery_ContentTree.insert("", tk.END, values=row)
 
-            
+
     def queryVendorPrices():
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
@@ -264,6 +301,21 @@ def MainScreen(tab,root):
             display_VendorPrices_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
+
+
+    # DoubleClicked function
+    def doubleClicked(event):
+        if (tableOndisplay.currentTable == "Product on Market"):
+            region = mainPageQuery_ContentTree.identify_column(event.x)
+            print("Sort Flag is " + summaryFlag.flag)
+            if region == "#4":
+                if summaryFlag.flag == "off":
+                    mainPageQuery("L2H")
+                    summaryFlag.flag = "on"
+                elif summaryFlag.flag == "on":
+                    mainPageQuery("H2L")
+                    summaryFlag.flag = "off"
+
     # Add item to product button function
     def submitAddProduct():
         conn = sqlite3.connect('Hiccups.db')
@@ -451,8 +503,6 @@ def MainScreen(tab,root):
         # this line below has to be out of try statement
         ordersEdit.destroy()
         editConfirmWindow.destroy()
-    def submitEditVendorPrices():
-        return 0
 
 
     # delete selected after confirmation
@@ -783,9 +833,6 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
 
-    def vendorPricesEditWindowPopup(): # and fill this edit
-        return 0
-
     # This confirmation window shows up when user try to save changes in Edit Window
     def editComfirm():
         global editConfirmWindow
@@ -929,44 +976,44 @@ def MainScreen(tab,root):
         mainPageQuery_ContentTree.heading("#5", text="Time Checked")
 
         mainPageQuery_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+        global summaryFlag
+        summaryFlag = summaryDCFlag("off")
+        mainPageQuery_ContentTree.bind('<Double-1>', doubleClicked)
         root.geometry("1300x460")
-        
+
     # Main Screen Labels
     main_table_select_label = Label(mainOptionFrame, text="Choose Table")
     main_table_select_label.grid(row=1, column=0, pady=10, padx=1)
     main_sortBy_label = Label(mainOptionFrame, text="Sort by")
-    main_sortBy_label.grid(row=6, column=0)
+    main_sortBy_label.grid(row=7, column=0)
     # Insert data button in Main screen
-    main_insert_button = Button(mainOptionFrame, text="Add Data", command=addCommand)
-    main_insert_button.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=95)
+    main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand)
+    main_insert_button.grid(row=3, column=0, columnspan=2, pady=10, padx=1, ipadx=70)
     # Display table button in Main screen
-    main_select_display = Button(mainOptionFrame, text="Display", command=displayCommand)
-    main_select_display.grid(row=3, column=0, columnspan=2, pady=10, padx=1, ipadx=103)
+    main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand)
+    main_select_display.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=83)
     # Edit button in Main Screen
-    main_edit_button = Button(mainOptionFrame, text="Edit Highlighted", command=editCommand)
-    main_edit_button.grid(row=5, column=0, columnspan=2, pady=10, padx=1, ipadx=78)
+    main_edit_button = Button(mainOptionFrame, text="Edit selected Column", command=editCommand)
+    main_edit_button.grid(row=5, column=0, columnspan=2, pady=10, padx=1, ipadx=62)
     # Sort button in Main Screen
     main_sort_button = Button(mainOptionFrame, text="Sort", command=sortCommand)
-    main_sort_button.grid(row=7, column=0, columnspan=2, pady=10, padx=1, ipadx=112) # row 6 is left for drop down
-    # Average Getter button
-    main_avgGetter_button = Button(mainOptionFrame, text="Calculate Average", command=avgGetterCommand)
-    main_avgGetter_button.grid(row=8, column=0, columnspan=2, pady=10, padx=1, ipadx=72)
+    main_sort_button.grid(row=8, column=0, columnspan=2, pady=10, padx=1, ipadx=112) # row 6 is left for drop down
+
     # Delete button in Main Screen
     main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm)
-    main_delete_button.grid(row=9, column=0, columnspan=2, pady=10, padx=1, ipadx=57)
-
+    main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay)
+    main_backToMainPage_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
     # Initial display
     displayMainPageQueryWindowSetUp()
     mainPageQuery()
 
     # things to be implemented
-    # 1.need to be able to return to this query after look up other tables
+    # (DONE) 1.need to be able to return to this query after look up other tables
     # (DONE) 2.need to be able to query for specific requirements (ex. Low to High/ High to Low)
-    # 3.need to be able to execute the query command after user click on the colomn, s.t. if
+    # (DONE)3.need to be able to execute the query command after user click on the colomn, s.t. if
     #   user click on unit list price once, it will execute "mainPageQuery('L2H'), if user click on
     #   unit price twice, it will execute "mainPageQuery('H2L') etc.
-    
-    
     # Commit our command
     conn.commit()
 
