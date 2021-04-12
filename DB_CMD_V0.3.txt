@@ -1,0 +1,150 @@
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS states;
+DROP TABLE IF EXISTS zipLocations;
+DROP TABLE IF EXISTS vendors;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS vendorPrices;
+DROP TABLE IF EXISTS status;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS orderLines;
+
+create table categories(
+  categoryName VARCHAR(50) NOT NULL,
+  CONSTRAINT categories_pk PRIMARY KEY (categoryName)
+);
+
+create table states(
+  abbreviation VARCHAR(2) NOT NULL,
+  stateName VARCHAR(20),
+  CONSTRAINT states_pk PRIMARY KEY (abbreviation),
+  CONSTRAINT states_ck UNIQUE (stateName)
+);
+
+INSERT INTO states
+VALUES ('AL', 'Alabama'),
+        ('AK', 'Alaska'),
+        ('AZ', 'Arizona'),
+        ('AR', 'Arkansas'),
+        ('CA', 'California'),
+        ('CO', 'Colorado'),
+        ('CT', 'Connecticut'),
+        ('DE', 'Delaware'),
+        ('DC', 'District of Columbia'),
+        ('FL', 'Florida'),
+        ('GA', 'Georgia'),
+        ('HI', 'Hawaii'),
+        ('ID', 'Idaho'),
+        ('IL', 'Illinois'),
+        ('IN', 'Indiana'),
+        ('IA', 'Iowa'),
+        ('KS', 'Kansas'),
+        ('KY', 'Kentucky'),
+        ('LA', 'Louisiana'),
+        ('ME', 'Maine'),
+        ('MD', 'Maryland'),
+        ('MA', 'Massachusetts'),
+        ('MI', 'Michigan'),
+        ('MN', 'Minnesota'),
+        ('MS', 'Mississippi'),
+        ('MO', 'Missouri'),
+        ('MT', 'Montana'),
+        ('NE', 'Nebraska'),
+        ('NV', 'Nevada'),
+        ('NH', 'New Hampshire'),
+        ('NJ', 'New Jersey'),
+        ('NM', 'New Mexico'),
+        ('NY', 'New York'),
+        ('NC', 'North Carolina'),
+        ('ND', 'North Dakota'),
+        ('OH', 'Ohio'),
+        ('OK', 'Oklahoma'),
+        ('OR', 'Oregon'),
+        ('PA', 'Pennsylvania'),
+        ('PR', 'Puerto Rico'),
+        ('RI', 'Rhode Island'),
+        ('SC', 'South Carolina'),
+        ('SD', 'South Dakota'),
+        ('TN', 'Tennessee'),
+        ('TX', 'Texas'),
+        ('UT', 'Utah'),
+        ('VT', 'Vermont'),
+        ('VA', 'Virginia'),
+        ('WA', 'Washington'),
+        ('WV', 'West Virginia'),
+        ('WI', 'Wisconsin'),
+        ('WY', 'Wyoming');
+
+create table zipLocations(
+  zipCode INT NOT NULL,
+  city VARCHAR(30),
+  state VARCHAR(2) NOT NULL,
+  CONSTRAINT zipLocations_pk PRIMARY KEY (zipCode),
+  CONSTRAINT state_zipLocations_fk FOREIGN KEY (state) REFERENCES states(abbreviation)
+);
+
+create table vendors(
+  vendorName VARCHAR(50) NOT NULL,
+  phoneNumber VARCHAR(20),
+  email VARCHAR(50),
+  streetAddress VARCHAR (50),
+  websiteURL VARCHAR(50),
+  zipCode INT,
+  CONSTRAINT vendors_pk PRIMARY KEY (vendorName),
+  CONSTRAINT vendors_ck UNIQUE (phoneNumber),
+  CONSTRAINT zipLocations_vendors_fk FOREIGN KEY (zipCode) REFERENCES zipLocations(zipCode)
+);
+
+create table products(
+  prodCode VARCHAR (15) NOT NULL,
+  prodDesc VARCHAR (150) NOT NULL,
+  unitsInStock double NOT NULL,
+  reorderQuantity double NOT NULL,
+  reorderLevel double NOT NULL,
+  category VARCHAR (50),
+  CONSTRAINT products_pk PRIMARY KEY (prodCode),
+  CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
+);
+
+create table vendorPrices(
+    vendorPrice_id INTEGER NOT NULL,
+    vendor VARCHAR(50) NOT NULL,
+    product VARCHAR(15) NOT NULL,
+    unitListPrice DOUBLE NOT NULL,
+    timeChecked DateTime NOT NULL,
+    CONSTRAINT vendorPrices_pk PRIMARY KEY (vendorprice_id),
+    CONSTRAINT vendorPrices_ck UNIQUE (vendor, product, timeChecked),
+    CONSTRAINT products_vendorPrices_fk FOREIGN KEY (product) REFERENCES products(prodCode),
+    CONSTRAINT vendors_vendorPrices_fk FOREIGN KEY (vendor) REFERENCES vendors(vendorName)
+);
+
+create table status(
+  status VARCHAR(10) NOT NULL,
+  CONSTRAINT status_pk PRIMARY KEY (status)
+);
+
+INSERT INTO status
+VALUES ('Delivered'),
+       ('Shipped'),
+       ('Processing');
+
+CREATE TABLE orders(
+    order_id INTEGER NOT NULL,
+    orderDate DATETIME,
+    vendor VARCHAR (50) NOT NULL,
+    orderStatus VARCHAR(10) NOT NULL,
+    CONSTRAINT orderID_pk PRIMARY KEY (order_id),
+    CONSTRAINT orders_vendorPrice_fk FOREIGN KEY (vendor) REFERENCES vendorprices(vendor),
+    CONSTRAINT status_vendorPrice_fk FOREIGN KEY (orderStatus) REFERENCES status(status)
+);
+
+--use unitSalePrice for subtotal(ext price tx) and order total
+CREATE TABLE orderLines(
+    'order' INT NOT NULL,
+    vendorListPrice INT NOT NULL,
+    unitSalePrice DOUBLE NOT NULL,
+    quantity DOUBLE NOT NULL,
+    CONSTRAINT orderLines_pk PRIMARY KEY ('order', vendorListPrice),
+    CONSTRAINT orders_orderLines_fk FOREIGN KEY ('order') REFERENCES orders(order_id),
+    CONSTRAINT vendorPrices_orderLines_fk FOREIGN KEY (vendorListPrice) REFERENCES vendorprices(vendorPrice_id)
+);
+
