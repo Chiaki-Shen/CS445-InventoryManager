@@ -7,10 +7,12 @@ DROP TABLE IF EXISTS vendorPrices;
 DROP TABLE IF EXISTS status;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS orderLines;
+DROP TABLE IF EXISTS inventory;
 
 create table categories(
   categoryName VARCHAR(50) NOT NULL,
   CONSTRAINT categories_pk PRIMARY KEY (categoryName)
+
 );
 
 create table states(
@@ -77,9 +79,9 @@ VALUES ('AL', 'Alabama'),
 create table zipLocations(
   zipCode INT NOT NULL,
   city VARCHAR(30),
-  state VARCHAR(2) NOT NULL,
+  stateAbbr VARCHAR(2) NOT NULL,
   CONSTRAINT zipLocations_pk PRIMARY KEY (zipCode),
-  CONSTRAINT state_zipLocations_fk FOREIGN KEY (state) REFERENCES states(abbreviation)
+  CONSTRAINT state_zipLocations_fk FOREIGN KEY (stateAbbr) REFERENCES states(abbreviation)
 );
 
 create table vendors(
@@ -87,34 +89,43 @@ create table vendors(
   phoneNumber VARCHAR(20),
   email VARCHAR(50),
   streetAddress VARCHAR (50),
-  websiteURL VARCHAR(50),
   zipCode INT,
+  websiteURL VARCHAR(50),
   CONSTRAINT vendors_pk PRIMARY KEY (vendorName),
   CONSTRAINT vendors_ck UNIQUE (phoneNumber),
+  CONSTRAINT vendors_ck2 UNIQUE (email),
   CONSTRAINT zipLocations_vendors_fk FOREIGN KEY (zipCode) REFERENCES zipLocations(zipCode)
 );
 
 create table products(
-  prodCode VARCHAR (15) NOT NULL,
-  prodDesc VARCHAR (150) NOT NULL,
-  unitsInStock double NOT NULL,
-  reorderQuantity double NOT NULL,
-  reorderLevel double NOT NULL,
-  category VARCHAR (50),
-  CONSTRAINT products_pk PRIMARY KEY (prodCode),
+  SKU VARCHAR (20) NOT NULL,
+  category VARCHAR (50) default 'N/A',
+  prodDesc VARCHAR NOT NULL,
+  productURL VARCHAR,
+  quantity VARCHAR (10) NOT NULL,
+  availability VARCHAR(10) NOT NULL,
+  --unitsInStock double NOT NULL,
+  CONSTRAINT products_pk PRIMARY KEY (SKU),
   CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
 );
 
+create table inventory(
+    inventory_id char(36) default (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+    SKU VARCHAR (25) NOT NULL,
+    unitsInStock double,
+    CONSTRAINT inventory_pk PRIMARY KEY (inventory_id),
+    CONSTRAINT product_inventory_fk FOREIGN KEY (SKU) REFERENCES products (SKU)
+);
+
 create table vendorPrices(
-    vendorPrice_id INTEGER NOT NULL,
-    vendor VARCHAR(50) NOT NULL,
-    product VARCHAR(15) NOT NULL,
+    vendorPriceID char(36) default (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+    vendorName VARCHAR(50) default 'N/A',
+    SKU VARCHAR(15) NOT NULL,
     unitListPrice DOUBLE NOT NULL,
-    timeChecked DateTime NOT NULL,
-    CONSTRAINT vendorPrices_pk PRIMARY KEY (vendorprice_id),
-    CONSTRAINT vendorPrices_ck UNIQUE (vendor, product, timeChecked),
-    CONSTRAINT products_vendorPrices_fk FOREIGN KEY (product) REFERENCES products(prodCode),
-    CONSTRAINT vendors_vendorPrices_fk FOREIGN KEY (vendor) REFERENCES vendors(vendorName)
+    timeChecked DateTime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT vendorPrices_pk PRIMARY KEY (vendorPriceID),
+    CONSTRAINT products_vendorPrices_fk FOREIGN KEY (SKU) REFERENCES products(SKU),
+    CONSTRAINT vendors_vendorPrices_fk FOREIGN KEY (vendorName) REFERENCES vendors(vendorName)
 );
 
 create table status(
@@ -128,23 +139,46 @@ VALUES ('Delivered'),
        ('Processing');
 
 CREATE TABLE orders(
-    order_id INTEGER NOT NULL,
+    orderId char(36) default (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
     orderDate DATETIME,
-    vendor VARCHAR (50) NOT NULL,
+    vendorName VARCHAR (50) NOT NULL,
     orderStatus VARCHAR(10) NOT NULL,
-    CONSTRAINT orderID_pk PRIMARY KEY (order_id),
-    CONSTRAINT orders_vendorPrice_fk FOREIGN KEY (vendor) REFERENCES vendorprices(vendor),
+    CONSTRAINT orderID_pk PRIMARY KEY (orderID),
+    CONSTRAINT orders_vendorPrice_fk FOREIGN KEY (vendorName) REFERENCES vendorprices(vendorName),
     CONSTRAINT status_vendorPrice_fk FOREIGN KEY (orderStatus) REFERENCES status(status)
 );
 
 --use unitSalePrice for subtotal(ext price tx) and order total
 CREATE TABLE orderLines(
-    'order' INT NOT NULL,
-    vendorListPrice INT NOT NULL,
-    unitSalePrice DOUBLE NOT NULL,
-    quantity DOUBLE NOT NULL,
-    CONSTRAINT orderLines_pk PRIMARY KEY ('order', vendorListPrice),
-    CONSTRAINT orders_orderLines_fk FOREIGN KEY ('order') REFERENCES orders(order_id),
-    CONSTRAINT vendorPrices_orderLines_fk FOREIGN KEY (vendorListPrice) REFERENCES vendorprices(vendorPrice_id)
+    orderId char(36) default (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+    SKU VARCHAR (15) NOT NULL,
+    productDesc VARCHAR (255),
+    quantity double NOT NULL,
+    unitSalePrice double NOT NULL,
+    vendorPriceID char(36) default (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(lower(hex(randomblob(2))),2) || '-' || lower(hex(randomblob(6)))),
+    CONSTRAINT orderLines_pk PRIMARY KEY (orderID, SKU),
+    CONSTRAINT orders_orderLines_fk FOREIGN KEY (orderID) REFERENCES orders(orderID),
+    CONSTRAINT vendorPrices_orderLines_fk FOREIGN KEY (vendorPriceID) REFERENCES vendorprices(vendorPriceID),
+    CONSTRAINT products_orderLines_fk FOREIGN KEY (SKU) REFERENCES products (SKU)
 );
+INSERT INTO categories VALUES ('Restaurant Supply');
+INSERT INTO vendors VALUES('Bestware', '+17147758082', 'support@bestware.com','10161 Bolsa Ave # 103C', 92683, 'https://bestware.com/');
+INSERT INTO zipLocations VALUES (92683,'Westminster','CA');
 
+--INSERT INTO products(SKU, prodDesc, productURL, quantity, availability) VALUES('PP-828', 'Pp Bread Bags','https://bestwareshop.com/products/pp-bread-bags','2000/CS',True);
+
+SELECT *
+FROM products
+INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+WHERE products.SKU LIKE 'C9130';
+
+SELECT *
+FROM products
+WHERE sku = 'RFM-2W';
+
+
+SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
+    FROM products
+    INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+    INNER JOIN vendors v on v.vendorName = vP.vendorName
+ORDER BY products.SKU;
