@@ -1,9 +1,9 @@
+import uuid
 from functools import partial
 from tkinter import *
 from tkinter import ttk
 import tkinter as tk
 import sqlite3
-
 
 
 def MainScreen(tab,root):
@@ -13,6 +13,7 @@ def MainScreen(tab,root):
     y = (hs / 2) - (700 / 2)
     conn = sqlite3.connect('Hiccups.db')  # create a DB if there is not one
     c = conn.cursor()
+
     # c.execute("Delete from products where prodCode = 'Potato' ")
     '''
     c.execute("SELECT * FROM products")
@@ -225,7 +226,7 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         # Query DB
-        c.execute("SELECT *,oid FROM orders")
+        c.execute("SELECT *,oid FROM orders ORDER BY orderDate DESC")
         records = c.fetchall()
 
         for row in display_Orders_ContentTree.get_children():
@@ -241,41 +242,38 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         if (opt == 'ALPHABETICAL'):
-            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
-                             FROM products
-                                INNER JOIN categories c on c.categoryName = products.category
-                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
-                             ORDER BY vendor''')
+            c.execute('''SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
+                            FROM products
+                            INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+                            INNER JOIN vendors v on v.vendorName = vP.vendorName
+                        ORDER BY products.SKU;''')
             records = c.fetchall()
         elif (opt == 'Newest'):
-            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
-                             FROM products
-                                INNER JOIN categories c on c.categoryName = products.category
-                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
-                             ORDER BY timeChecked''')
+            c.execute('''SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
+                            FROM products
+                            INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+                            INNER JOIN vendors v on v.vendorName = vP.vendorName
+                        ORDER BY timeChecked;''')
             records = c.fetchall()
         elif(opt == 'L2H'):
-            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+            c.execute('''SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
                             FROM products
-                                INNER JOIN categories c on c.categoryName = products.category
-                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
-                            GROUP BY prodCode, vendor
-                            ORDER BY unitListPrice''')
+                            INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+                            INNER JOIN vendors v on v.vendorName = vP.vendorName
+                        ORDER BY unitListPrice ASC;''')
             records = c.fetchall()
         elif (opt == 'H2L'):
-            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+            c.execute('''SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
                             FROM products
-                                INNER JOIN categories c on c.categoryName = products.category
-                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
-                            GROUP BY prodCode, vendor
-                            ORDER BY unitListPrice DESC''')
+                            INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+                            INNER JOIN vendors v on v.vendorName = vP.vendorName
+                        ORDER BY unitListPrice DESC;''')
             records = c.fetchall()
         else:
-            c.execute('''SELECT vendor, categoryName, prodCode, unitListPrice, timeChecked 
+            c.execute('''SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
                             FROM products
-                                INNER JOIN categories c on c.categoryName = products.category
-                                INNER JOIN vendorPrices vP on products.prodCode = vP.product
-                            GROUP BY prodCode, vendor''')
+                            INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+                            INNER JOIN vendors v on v.vendorName = vP.vendorName;''')
             records = c.fetchall()
 
         for row in mainPageQuery_ContentTree.get_children():
@@ -321,14 +319,16 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
-        c.execute("INSERT INTO products VALUES (:code, :desc,:unitIn,:reQuantity,:reLevel,:cata)",
+        c.execute("INSERT INTO products VALUES (:sku, :cate,:desc,:url, :quan,:avail, :level, :stock)",
                   {
-                      'code': productbox1.get(),
-                      'desc': productbox2.get(),
-                      'unitIn': productbox3.get(),
-                      'reQuantity': productbox4.get(),
-                      'reLevel': productbox5.get(),
-                      'cata': productbox6.get(),
+                      'sku': productbox1.get(),
+                      'cate': productbox2.get(),
+                      'desc': productbox3.get(),
+                      'url': productbox4.get(),
+                      'quan': productbox5.get(),
+                      'avail': productbox6.get(),
+                      'level': productbox7.get(),
+                      'stock': productbox8.get(),
                   })
         # Clear the text box
         productbox1.delete(0, END)
@@ -337,6 +337,8 @@ def MainScreen(tab,root):
         productbox4.delete(0, END)
         productbox5.delete(0, END)
         productbox6.delete(0, END)
+        productbox7.delete(0, END)
+        productbox8.delete(0, END)
 
         conn.commit()
         conn.close()
@@ -369,18 +371,18 @@ def MainScreen(tab,root):
     def submitAddOrder():
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
-        c.execute("INSERT INTO orders VALUES (:id, :date,:vendor,:orderStatus)",
+        uid_str = uuid.uuid4().urn
+        id = uid_str[9:]
+        c.execute("INSERT INTO orders VALUES (:id, :date,:orderStatus)",
                   {
-                      'id': orderbox1.get(),
+                      'id': id,
                       'date': orderbox2.get(),
-                      'vendor': orderbox3.get(),
-                      'orderStatus': orderbox4.get()
+                      'orderStatus': orderbox3.get()
                   })
         # Clear the text box
         orderbox1.delete(0, END)
         orderbox2.delete(0, END)
         orderbox3.delete(0, END)
-        orderbox4.delete(0, END)
 
         conn.commit()
         conn.close()
@@ -389,16 +391,16 @@ def MainScreen(tab,root):
     def submitAddVendorPrices():
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
-
+        uid_str = uuid.uuid4().urn
+        id = uid_str[9:]
         c.execute("INSERT INTO vendorPrices VALUES (:price, :vendor,:product,:unitPrice, :timecheck)",
                   {
-                      'price': vendorPricebox1.get(),
+                      'price': id,
                       'vendor': vendorPricebox2.get(),
                       'product': vendorPricebox3.get(),
                       'unitPrice': vendorPricebox4.get(),
                       'timecheck': vendorPricebox5.get(),
                   })
-        vendorPricebox1.delete(0, END)
         vendorPricebox2.delete(0, END)
         vendorPricebox3.delete(0, END)
         vendorPricebox4.delete(0, END)
@@ -413,25 +415,32 @@ def MainScreen(tab,root):
             conn = sqlite3.connect('Hiccups.db')
             c = conn.cursor()
             c.execute('''UPDATE products
-                         SET prodDesc = :name,
-                             unitsInStock = :stock,
-                             reorderQuantity = :quantity,
-                             reorderLevel = :level,
-                             category = :cate
-                         WHERE prodCode = :code''',
+                         SET 
+                            category = :cate,
+                            prodDesc = :name,
+                            productURL = :url,
+                            quantity = :quan,
+                            availability = :avail,
+                            reorderLevel = :level,
+                            unitsInStock = :stock
+                         WHERE SKU = :sku''',
                     {
-                           'code': productEditbox1.get(),
-                           'name': productEditbox2.get(),
-                           'stock': productEditbox3.get(),
-                           'quantity': productEditbox4.get(),
-                           'level': productEditbox5.get(),
-                           'cate': productEditbox6.get(),
+                           'sku': productEditbox1.get(),
+                           'cate': productEditbox2.get(),
+                           'name': productEditbox3.get(),
+                           'url': productEditbox4.get(),
+                           'quan': productEditbox5.get(),
+                           'avail': productEditbox6.get(),
+                            'level': productEditbox7.get(),
+                            'stock': productEditbox8.get()
                     })
             productEditbox2.delete(0, END)
             productEditbox3.delete(0, END)
             productEditbox4.delete(0, END)
             productEditbox5.delete(0, END)
             productEditbox6.delete(0, END)
+            productEditbox7.delete(0, END)
+            productEditbox8.delete(0, END)
 
             conn.commit()
             conn.close()
@@ -482,18 +491,16 @@ def MainScreen(tab,root):
             c = conn.cursor()
             c.execute('''UPDATE orders
                          SET orderDate = :date,
-                             vendor = :vendor,
                              orderStatus = :status
-                         WHERE order_id = :id''',
+                         WHERE orderId = :id''',
                       {
                           'id': ordersEditbox1.get(),
                           'date': ordersEditbox2.get(),
-                          'vendor': ordersEditbox3.get(),
-                          'status': ordersEditbox4.get(),
+                          'status': ordersEditbox3.get(),
                       })
             ordersEditbox2.delete(0, END)
             ordersEditbox3.delete(0, END)
-            ordersEditbox4.delete(0, END)
+
 
             conn.commit()
             conn.close()
@@ -523,7 +530,7 @@ def MainScreen(tab,root):
         global productAdd
         productAdd = Tk()
         productAdd.title("Add data to product table")
-        productAdd.geometry('%dx%d+%d+%d' % (400, 250, x*1.5, y*1.5))
+        productAdd.geometry('%dx%d+%d+%d' % (400, 280, x*1.5, y*1.5))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -545,21 +552,31 @@ def MainScreen(tab,root):
         global productbox6
         productbox6 = Entry(productAdd, width=30)
         productbox6.grid(row=7, column=1, padx=20, pady=(10, 0))
+        global productbox7
+        productbox7 = Entry(productAdd, width=30)
+        productbox7.grid(row=8, column=1, padx=20, pady=(10, 0))
+        global productbox8
+        productbox8 = Entry(productAdd, width=30)
+        productbox8.grid(row=9, column=1, padx=20, pady=(10, 0))
         # Create labels for display
-        box1_label = Label(productAdd, text="Product Code")
+        box1_label = Label(productAdd, text="SKU")
         box1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
-        box2_label = Label(productAdd, text="Product Desc")
+        box2_label = Label(productAdd, text="Category")
         box2_label.grid(row=3, column=0, padx=20)
-        box3_label = Label(productAdd, text="Units In Stock")
+        box3_label = Label(productAdd, text="Product Description")
         box3_label.grid(row=4, column=0, padx=20)
-        box4_label = Label(productAdd, text="Reorder Quantity")
+        box4_label = Label(productAdd, text="Product URL")
         box4_label.grid(row=5, column=0, padx=20)
-        box5_label = Label(productAdd, text="Reorder Level")
+        box5_label = Label(productAdd, text="Quantity")
         box5_label.grid(row=6, column=0, padx=20)
-        box6_label = Label(productAdd, text="Category")
+        box6_label = Label(productAdd, text="Availability")
         box6_label.grid(row=7, column=0, padx=20)
+        box7_label = Label(productAdd, text="Reorder Level")
+        box7_label.grid(row=8, column=0, padx=20)
+        box8_label = Label(productAdd, text="Units In Stock")
+        box8_label.grid(row=9, column=0, padx=20)
         option_Add_btn = Button(productAdd, text="Add Product", command=submitAddProduct)
-        option_Add_btn.grid(row=8, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+        option_Add_btn.grid(row=10, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
         conn.commit()
         conn.close()
@@ -573,8 +590,8 @@ def MainScreen(tab,root):
         c = conn.cursor()
 
         global vendorbox1
-        vendorbox1 = Entry(vendorAdd, width=30)  # product Code
-        vendorbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
+        #vendorbox1 = Entry(vendorAdd, width=30)  # product Code
+        #vendorbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
         global vendorbox2
         vendorbox2 = Entry(vendorAdd, width=30)  # product Desc
         vendorbox2.grid(row=3, column=1, padx=20, pady=(10, 0))
@@ -620,28 +637,24 @@ def MainScreen(tab,root):
 
         global orderbox1
         orderbox1 = Entry(ordersAdd, width=30)
-        orderbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
+        #orderbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
         global orderbox2
         orderbox2 = Entry(ordersAdd, width=30)
         orderbox2.grid(row=3, column=1, padx=20, pady=(10, 0))
         global orderbox3
         orderbox3 = Entry(ordersAdd, width=30)
         orderbox3.grid(row=4, column=1, padx=20, pady=(10, 0))
-        global orderbox4
-        orderbox4 = Entry(ordersAdd, width=30)
-        orderbox4.grid(row=5, column=1, padx=20, pady=(10, 0))
+
         # Create labels for display
-        orderbox1_label = Label(ordersAdd, text="Order ID")
-        orderbox1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
+        #orderbox1_label = Label(ordersAdd, text="Order ID")
+        #orderbox1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
         orderbox2_label = Label(ordersAdd, text="Order Date")
         orderbox2_label.grid(row=3, column=0, padx=20)
-        orderbox3_label = Label(ordersAdd, text="Vendor")
+        orderbox3_label = Label(ordersAdd, text="Status")
         orderbox3_label.grid(row=4, column=0, padx=20)
-        orderbox4_label = Label(ordersAdd, text="Status")
-        orderbox4_label.grid(row=5, column=0, padx=20)
 
         option_Add_btn = Button(ordersAdd, text="Add record to Orders", command=submitAddOrder)
-        option_Add_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+        option_Add_btn.grid(row=5, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
         conn.commit()
         conn.close()
@@ -654,9 +667,9 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
-        global vendorPricebox1
-        vendorPricebox1 = Entry(vendorPriceAdd, width=30)  # product Code
-        vendorPricebox1.grid(row=2, column=1, padx=20, pady=(10, 0))
+        #global vendorPricebox1
+        #vendorPricebox1 = Entry(vendorPriceAdd, width=30)  # product Code
+        #vendorPricebox1.grid(row=2, column=1, padx=20, pady=(10, 0))
         global vendorPricebox2
         vendorPricebox2 = Entry(vendorPriceAdd, width=30)  # product Desc
         vendorPricebox2.grid(row=3, column=1, padx=20, pady=(10, 0))
@@ -670,15 +683,15 @@ def MainScreen(tab,root):
         vendorPricebox5 = Entry(vendorPriceAdd, width=30)  # vender
         vendorPricebox5.grid(row=6, column=1, padx=20, pady=(10, 0))
         # Create labels for display
-        vendorPricebox1_label = Label(vendorPriceAdd, text="Unit In Stock")
-        vendorPricebox1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
-        vendorPricebox2_label = Label(vendorPriceAdd, text="Reorder Quantity")
+        #vendorPricebox1_label = Label(vendorPriceAdd, text="vendorPriceID")
+        #vendorPricebox1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
+        vendorPricebox2_label = Label(vendorPriceAdd, text="Vendor Name")
         vendorPricebox2_label.grid(row=3, column=0, padx=20)
-        vendorPricebox3_label = Label(vendorPriceAdd, text="Reorder Level")
+        vendorPricebox3_label = Label(vendorPriceAdd, text="SKU")
         vendorPricebox3_label.grid(row=4, column=0, padx=20)
-        vendorPricebox4_label = Label(vendorPriceAdd, text="Product Code")
+        vendorPricebox4_label = Label(vendorPriceAdd, text="unit List Price")
         vendorPricebox4_label.grid(row=5, column=0, padx=20)
-        vendorPricebox5_label = Label(vendorPriceAdd, text="Product Code")
+        vendorPricebox5_label = Label(vendorPriceAdd, text="Time Checked")
         vendorPricebox5_label.grid(row=6, column=0, padx=20)
 
         option_Add_btn = Button(vendorPriceAdd, text="Add to Vendor Price List", command=submitAddVendorPrices)
@@ -715,27 +728,39 @@ def MainScreen(tab,root):
         global productEditbox6
         productEditbox6 = Entry(productsEdit, width=30)
         productEditbox6.grid(row=7, column=1, padx=20, pady=(10, 0))
+        global productEditbox7
+        productEditbox7 = Entry(productsEdit, width=30)
+        productEditbox7.grid(row=8, column=1, padx=20, pady=(10, 0))
+        global productEditbox8
+        productEditbox8 = Entry(productsEdit, width=30)
+        productEditbox8.grid(row=9, column=1, padx=20, pady=(10, 0))
         # Create labels for display
-        # box1_label = Label(productsEdit, text="Product Code")
+        # box1_label = Label(productsEdit, text="SKU")
         # box1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
-        box2_label = Label(productsEdit, text="Product Desc")
+        box2_label = Label(productsEdit, text="Category")
         box2_label.grid(row=3, column=0, padx=20)
-        box3_label = Label(productsEdit, text="Units In Stock")
+        box3_label = Label(productsEdit, text="Product Description")
         box3_label.grid(row=4, column=0, padx=20)
-        box4_label = Label(productsEdit, text="Reorder Quantity")
+        box4_label = Label(productsEdit, text="Product URL")
         box4_label.grid(row=5, column=0, padx=20)
-        box5_label = Label(productsEdit, text="Reorder Level")
+        box5_label = Label(productsEdit, text="Quantity")
         box5_label.grid(row=6, column=0, padx=20)
-        box6_label = Label(productsEdit, text="Category")
+        box6_label = Label(productsEdit, text="Availability")
         box6_label.grid(row=7, column=0, padx=20)
+        box7_label = Label(productsEdit, text="Reorder Level")
+        box7_label.grid(row=8, column=0, padx=20)
+        box8_label = Label(productsEdit, text="Units In Stock")
+        box8_label.grid(row=9, column=0, padx=20)
         option_edit_btn = Button(productsEdit, text="Save Edit", command=editComfirm)
-        option_edit_btn.grid(row=8, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+        option_edit_btn.grid(row=10, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
         productEditbox1.insert(0, valuesInColumn[0])
         productEditbox2.insert(0, valuesInColumn[1])
         productEditbox3.insert(0, valuesInColumn[2])
         productEditbox4.insert(0, valuesInColumn[3])
         productEditbox5.insert(0, valuesInColumn[4])
         productEditbox6.insert(0, valuesInColumn[5])
+        productEditbox7.insert(0, valuesInColumn[6])
+        productEditbox8.insert(0, valuesInColumn[7])
         conn.commit()
         conn.close()
 
@@ -810,26 +835,21 @@ def MainScreen(tab,root):
         global ordersEditbox3
         ordersEditbox3 = Entry(ordersEdit, width=30)
         ordersEditbox3.grid(row=4, column=1, padx=20, pady=(10, 0))
-        global ordersEditbox4
-        ordersEditbox4 = Entry(ordersEdit, width=30)
-        ordersEditbox4.grid(row=5, column=1, padx=20, pady=(10, 0))
+
 
         # Create labels for display
         # box1_label = Label(productsEdit, text="Order ID")
         # box1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
         box2_label = Label(ordersEdit, text="Order Date")
         box2_label.grid(row=3, column=0, padx=20)
-        box3_label = Label(ordersEdit, text="Vendor")
+        box3_label = Label(ordersEdit, text="Order Status")
         box3_label.grid(row=4, column=0, padx=20)
-        box4_label = Label(ordersEdit, text="Order Status")
-        box4_label.grid(row=5, column=0, padx=20)
 
         option_edit_btn = Button(ordersEdit, text="Save Edit", command=editComfirm)
         option_edit_btn.grid(row=8, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
         ordersEditbox1.insert(0, valuesInColumn[0])
         ordersEditbox2.insert(0, valuesInColumn[1])
         ordersEditbox3.insert(0, valuesInColumn[2])
-        ordersEditbox4.insert(0, valuesInColumn[3])
         conn.commit()
         conn.close()
 
@@ -858,7 +878,7 @@ def MainScreen(tab,root):
         if (tableOndisplay.currentTable == "products"):
                 selectColumn = display_Products_ContentTree.focus()
                 valuesInColumn = display_Products_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("products", valuesInColumn[6])
+                columnAxis = treeCurrentdisplay("products", valuesInColumn[8])
         elif (tableOndisplay.currentTable == "vendors"):
                 selectColumn = display_Vendors_ContentTree.focus()
                 valuesInColumn = display_Vendors_ContentTree.item(selectColumn, "values")
@@ -866,7 +886,7 @@ def MainScreen(tab,root):
         elif (tableOndisplay.currentTable == "orders"):
                 selectColumn = display_Orders_ContentTree.focus()
                 valuesInColumn = display_Orders_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("orders", valuesInColumn[3])
+                columnAxis = treeCurrentdisplay("orders", valuesInColumn[2])
         elif (tableOndisplay.currentTable == "vendorPrices"):
                 selectColumn = display_VendorPrices_ContentTree.focus()
                 valuesInColumn = display_VendorPrices_ContentTree.item(selectColumn, "values")
@@ -885,22 +905,26 @@ def MainScreen(tab,root):
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("products", "")
         global display_Products_ContentTree
-        display_Products_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6"), show='headings')
+        display_Products_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"), show='headings')
         display_Products_ContentTree.column("#1", width=150, minwidth=100, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#1", text="Product Code")
+        display_Products_ContentTree.heading("#1", text="SKU")
         display_Products_ContentTree.column("#2", width=250, minwidth=150, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#2", text="Product Desc")
+        display_Products_ContentTree.heading("#2", text="Category")
         display_Products_ContentTree.column("#3", width=120, minwidth=100, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#3", text="Unit In Stock")
+        display_Products_ContentTree.heading("#3", text="Prod Description")
         display_Products_ContentTree.column("#4", width=120, minwidth=100, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#4", text="Reorder Quantity")
+        display_Products_ContentTree.heading("#4", text="Product URL")
         display_Products_ContentTree.column("#5", width=120, minwidth=100, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#5", text="Reorder Level")
+        display_Products_ContentTree.heading("#5", text="Quantity")
         display_Products_ContentTree.column("#6", width=120, minwidth=100, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#6", text="Category")
+        display_Products_ContentTree.heading("#6", text="Availability")
+        display_Products_ContentTree.column("#7", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.heading("#7", text="Reorder Level")
+        display_Products_ContentTree.column("#8", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.heading("#8", text="Units In Stock")
 
         display_Products_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1320x460")
+        root.geometry("1600x460")
 
     def displayVendorsWindowSetUp():
         global tableOndisplay
@@ -927,18 +951,16 @@ def MainScreen(tab,root):
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("orders", "")
         global display_Orders_ContentTree
-        display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings')
+        display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3"), show='headings')
         display_Orders_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
         display_Orders_ContentTree.heading("#1", text="order ID")
         display_Orders_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#2", text="Order Date")
         display_Orders_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
-        display_Orders_ContentTree.heading("#3", text="Vendor")
-        display_Orders_ContentTree.column("#4", width=140, minwidth=100, anchor=tk.CENTER)
-        display_Orders_ContentTree.heading("#4", text="Status")
+        display_Orders_ContentTree.heading("#3", text="Status")
 
         display_Orders_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1160x460")
+        root.geometry("1000x460")
 
     def displayVendorPricesWindowSetUp():
         global tableOndisplay
@@ -950,7 +972,7 @@ def MainScreen(tab,root):
         display_VendorPrices_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#2", text="Vendor")
         display_VendorPrices_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
-        display_VendorPrices_ContentTree.heading("#3", text="Product")
+        display_VendorPrices_ContentTree.heading("#3", text="SKU")
         display_VendorPrices_ContentTree.column("#4", width=140, minwidth=100, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#4", text="Unit List Price")
         display_VendorPrices_ContentTree.column("#5", width=140, minwidth=100, anchor=tk.CENTER)
@@ -1019,7 +1041,3 @@ def MainScreen(tab,root):
 
     # Close our connection
     conn.close()
-
-
-
-
