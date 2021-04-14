@@ -41,6 +41,8 @@ def MainScreen(tab,root):
     # print(mainComboDropdown.get())
     mainSortComboDropdown.grid(row=7, column=1, pady=1, padx=1)
 
+
+
     class treeCurrentdisplay:
         def __init__(self, currenttable, index):
             self.currentTable = currenttable
@@ -210,7 +212,10 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         # Query DB
-        c.execute("SELECT *,oid FROM vendors")
+        c.execute('''SELECT v.vendorName, v.phoneNumber, v.email, v.streetAddress, zL.zipCode, zL.city, zL.stateAbbr, v.websiteURL
+                            FROM vendors v
+                                INNER JOIN zipLocations zL on zL.zipCode = v.zipCode
+                        ORDER BY vendorName''')
         records = c.fetchall()
 
         for row in display_Vendors_ContentTree.get_children():
@@ -226,7 +231,14 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         # Query DB
-        c.execute("SELECT *,oid FROM orders ORDER BY orderDate DESC")
+        c.execute('''SELECT o.orderId, o.orderDate, oL.SKU, o.orderStatus
+                        FROM orders o
+                        INNER JOIN orderLines oL on o.orderId = oL.orderId
+                        INNER JOIN status s on o.orderStatus = s.status
+                        INNER JOIN products p on p.SKU = oL.SKU
+                        INNER JOIN vendorPrices vP on oL.SKU = vP.SKU
+                    GROUP BY o.orderID, oL.SKU
+                    ORDER BY o.orderDate DESC''')
         records = c.fetchall()
 
         for row in display_Orders_ContentTree.get_children():
@@ -288,7 +300,12 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         # Query DB
-        c.execute("SELECT *,oid FROM vendorPrices")
+        c.execute('''SELECT v.vendorName, p.prodDesc, unitListPrice, timeChecked
+                        FROM vendors v
+                            INNER JOIN vendorPrices vP on v.vendorName = vP.vendorName
+                            INNER JOIN products p on p.SKU = vP.SKU
+                    GROUP BY v.vendorName, p.prodDesc, unitListPrice, timeChecked
+                    ORDER BY prodDesc''')
         records = c.fetchall()
 
         for row in display_VendorPrices_ContentTree.get_children():
@@ -330,6 +347,10 @@ def MainScreen(tab,root):
                       'level': productbox7.get(),
                       'stock': productbox8.get(),
                   })
+        c.execute("INSERT INTO categories VALUES (:name)",
+                  {
+                      'name': productbox2.get()
+                  })
         # Clear the text box
         productbox1.delete(0, END)
         productbox2.delete(0, END)
@@ -357,6 +378,12 @@ def MainScreen(tab,root):
                       'URL': vendorbox5.get(),
                       'zip': vendorbox6.get()
                   })
+        c.execute("INSERT INTO zipLocations VALUES (:zip, :city, :state)",
+                  {
+                      'zip': vendorbox6.get(),
+                      'city': vendorbox7.get(),
+                      'state': vendorbox8.get()
+                  })
         # Clear the text box
         vendorbox1.delete(0, END)
         vendorbox2.delete(0, END)
@@ -364,6 +391,8 @@ def MainScreen(tab,root):
         vendorbox4.delete(0, END)
         vendorbox5.delete(0, END)
         vendorbox6.delete(0, END)
+        vendorbox7.delete(0, END)
+        vendorbox8.delete(0, END)
         conn.commit()
         conn.close()
         displayCommand()
@@ -609,13 +638,13 @@ def MainScreen(tab,root):
         global vendorAdd
         vendorAdd = Tk()
         vendorAdd.title("Add New Vendor")
-        vendorAdd.geometry('%dx%d+%d+%d' % (400, 250, x*1.5, y*1.5))
+        vendorAdd.geometry('%dx%d+%d+%d' % (400, 300, x*1.5, y*1.5))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
         global vendorbox1
-        #vendorbox1 = Entry(vendorAdd, width=30)  # product Code
-        #vendorbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
+        vendorbox1 = Entry(vendorAdd, width=30)  # product Code
+        vendorbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
         global vendorbox2
         vendorbox2 = Entry(vendorAdd, width=30)  # product Desc
         vendorbox2.grid(row=3, column=1, padx=20, pady=(10, 0))
@@ -631,6 +660,12 @@ def MainScreen(tab,root):
         global vendorbox6
         vendorbox6 = Entry(vendorAdd, width=30)  # category
         vendorbox6.grid(row=7, column=1, padx=20, pady=(10, 0))
+        global vendorbox7
+        vendorbox7 = Entry(vendorAdd, width=30)  # category
+        vendorbox7.grid(row=8, column=1, padx=20, pady=(10, 0))
+        global vendorbox8
+        vendorbox8 = Entry(vendorAdd, width=30)  # category
+        vendorbox8.grid(row=9, column=1, padx=20, pady=(10, 0))
         # Create labels for display
         vendorbox1_label = Label(vendorAdd, text="Vendor Name")
         vendorbox1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
@@ -644,9 +679,13 @@ def MainScreen(tab,root):
         vendorbox5_label.grid(row=6, column=0, padx=20)
         vendorbox6_label = Label(vendorAdd, text="Zip Code")
         vendorbox6_label.grid(row=7, column=0, padx=20)
+        vendorbox7_label = Label(vendorAdd, text="City")
+        vendorbox7_label.grid(row=8, column=0, padx=20)
+        vendorbox8_label = Label(vendorAdd, text="State")
+        vendorbox8_label.grid(row=9, column=0, padx=20)
 
         option_Add_btn = Button(vendorAdd, text="Add Vendor info", command=submitAddVendor)
-        option_Add_btn.grid(row=8, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+        option_Add_btn.grid(row=10, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
         conn.commit()
         conn.close()
@@ -686,6 +725,7 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
+
         global orderbox1
         orderbox1 = Entry(ordersAdd, width=30)
         #orderbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
@@ -695,6 +735,8 @@ def MainScreen(tab,root):
         global orderbox3
         orderbox3 = Entry(ordersAdd, width=30)
         orderbox3.grid(row=4, column=1, padx=20, pady=(10, 0))
+
+
 
         # Create labels for display
         #orderbox1_label = Label(ordersAdd, text="Order ID")
@@ -935,7 +977,7 @@ def MainScreen(tab,root):
         elif (tableOndisplay.currentTable == "vendors"):
                 selectColumn = display_Vendors_ContentTree.focus()
                 valuesInColumn = display_Vendors_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("vendors", valuesInColumn[6])
+                columnAxis = treeCurrentdisplay("vendors", valuesInColumn[8])
         elif (tableOndisplay.currentTable == "orders"):
                 selectColumn = display_Orders_ContentTree.focus()
                 valuesInColumn = display_Orders_ContentTree.item(selectColumn, "values")
@@ -983,19 +1025,23 @@ def MainScreen(tab,root):
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendors", "")
         global display_Vendors_ContentTree
-        display_Vendors_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6"), show='headings')
-        display_Vendors_ContentTree.column("#1", width=180, minwidth=100, anchor=tk.W)
+        display_Vendors_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"), show='headings')
+        display_Vendors_ContentTree.column("#1", width=120, minwidth=70, anchor=tk.W)
         display_Vendors_ContentTree.heading("#1", text="Vendor Name")
-        display_Vendors_ContentTree.column("#2", width=180, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#2", width=130, minwidth=90, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#2", text="Phone Number")
-        display_Vendors_ContentTree.column("#3", width=200, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#3", width=170, minwidth=100, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#3", text="Email")
-        display_Vendors_ContentTree.column("#4", width=200, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#4", width=160, minwidth=100, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#4", text="Address")
-        display_Vendors_ContentTree.column("#5", width=200, minwidth=100, anchor=tk.CENTER)
-        display_Vendors_ContentTree.heading("#5", text="Web URL")
+        display_Vendors_ContentTree.column("#5", width=80, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.heading("#5", text="Zip Code")
         display_Vendors_ContentTree.column("#6", width=100, minwidth=90, anchor=tk.CENTER)
-        display_Vendors_ContentTree.heading("#6", text="Zip Code")
+        display_Vendors_ContentTree.heading("#6", text="City")
+        display_Vendors_ContentTree.column("#7", width=70, minwidth=60, anchor=tk.CENTER)
+        display_Vendors_ContentTree.heading("#7", text="State")
+        display_Vendors_ContentTree.column("#8", width=100, minwidth=90, anchor=tk.CENTER)
+        display_Vendors_ContentTree.heading("#8", text="Web URL")
 
         display_Vendors_ContentTree.grid(row=0, column=0, padx=50, pady=20)
         root.geometry("1480x460")
@@ -1004,32 +1050,33 @@ def MainScreen(tab,root):
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("orders", "")
         global display_Orders_ContentTree
-        display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3"), show='headings')
+        display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings')
         display_Orders_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
         display_Orders_ContentTree.heading("#1", text="order ID")
         display_Orders_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#2", text="Order Date")
         display_Orders_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
-        display_Orders_ContentTree.heading("#3", text="Status")
+        display_Orders_ContentTree.heading("#3", text="SKU")
+        display_Orders_ContentTree.column("#4", width=180, minwidth=80, anchor=tk.CENTER)
+        display_Orders_ContentTree.heading("#4", text="Status")
 
         display_Orders_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1000x460")
+        root.geometry("1200x460")
 
     def displayVendorPricesWindowSetUp():
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendorPrices", "")
         global display_VendorPrices_ContentTree
-        display_VendorPrices_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings')
+        display_VendorPrices_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings')
         display_VendorPrices_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
-        display_VendorPrices_ContentTree.heading("#1", text="Vendor Price ID")
+        display_VendorPrices_ContentTree.heading("#1", text="Vendor")
         display_VendorPrices_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
-        display_VendorPrices_ContentTree.heading("#2", text="Vendor")
+        display_VendorPrices_ContentTree.heading("#2", text="SKU")
         display_VendorPrices_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
-        display_VendorPrices_ContentTree.heading("#3", text="SKU")
+        display_VendorPrices_ContentTree.heading("#3", text="Unit List Price")
         display_VendorPrices_ContentTree.column("#4", width=140, minwidth=100, anchor=tk.CENTER)
-        display_VendorPrices_ContentTree.heading("#4", text="Unit List Price")
-        display_VendorPrices_ContentTree.column("#5", width=140, minwidth=100, anchor=tk.CENTER)
-        display_VendorPrices_ContentTree.heading("#5", text="Time Checked")
+        display_VendorPrices_ContentTree.heading("#4", text="Time Checked")
+
 
         display_VendorPrices_ContentTree.grid(row=0, column=0, padx=50, pady=20)
         root.geometry("1300x460")
@@ -1084,12 +1131,25 @@ def MainScreen(tab,root):
     mainPageQuery()
 
     # things to be implemented
-    # (DONE) 1.need to be able to return to this query after look up other tables
-    # (DONE) 2.need to be able to query for specific requirements (ex. Low to High/ High to Low)
-    # (DONE)3.need to be able to execute the query command after user click on the colomn, s.t. if
-    #   user click on unit list price once, it will execute "mainPageQuery('L2H'), if user click on
-    #   unit price twice, it will execute "mainPageQuery('H2L') etc.
-    # Commit our command
+    # 1.DROPDOWN for status when adding new orders, to choose from "processing", "shipped", "delivered", "other"
+    # 2.Scroll Bar for all tables
+    # 3.Connect to csv file by using python  (integrate web crawler to the python)
+    # 4.csv file should be corresponding to the implementation for easier import process
+    # 5.generate pdf report
+    # 6. (OPTIONAL) advanced query based on user filter (products and vendorprices and orders table only)
+    # 7. display orderlines by select a specific order low (either double clicking or an extra option)
+    # 8. low stock alert 
+    # 9. sort product by popularity by order history
+    # 10. display active orders
+
+    #thins to enhance
+    # 1. switching tables have some displaying problems
+    # 2. make the colors of the odd and even columns different
+    # 3. (advanced) right-click to select to edit
+
+
+
+
     conn.commit()
 
     # Close our connection
