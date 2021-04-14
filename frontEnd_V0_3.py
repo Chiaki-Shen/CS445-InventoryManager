@@ -368,26 +368,6 @@ def MainScreen(tab,root):
         conn.close()
         displayCommand()
 
-    def submitAddOrder():
-        conn = sqlite3.connect('Hiccups.db')
-        c = conn.cursor()
-        uid_str = uuid.uuid4().urn
-        id = uid_str[9:]
-        c.execute("INSERT INTO orders VALUES (:id, :date,:orderStatus)",
-                  {
-                      'id': id,
-                      'date': orderbox2.get(),
-                      'orderStatus': orderbox3.get()
-                  })
-        # Clear the text box
-        orderbox1.delete(0, END)
-        orderbox2.delete(0, END)
-        orderbox3.delete(0, END)
-
-        conn.commit()
-        conn.close()
-        displayCommand()
-
     def submitAddVendorPrices():
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
@@ -409,6 +389,50 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
         displayCommand()
+
+
+    def submitAddOrder():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        uid_str = uuid.uuid4().urn
+        global orderId
+        orderId = uid_str[9:]
+
+        c.execute("INSERT INTO orders VALUES (:id, :date,:orderStatus)",
+                  {
+                      'id': orderId,
+                      'date': orderbox2.get(),
+                      'orderStatus': orderbox3.get()
+                  })
+        # Clear the text box
+        orderbox1.delete(0, END)
+        orderbox2.delete(0, END)
+        orderbox3.delete(0, END)
+
+        conn.commit()
+        orderLinesWindowsPopup()
+
+
+
+    def submitOrderlines():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+
+        c.execute("INSERT INTO orderLines VALUES (:id, :SKU,:unitSalePrice)",
+                  {
+                      'id': orderId,
+                      'SKU': orderlinesbox2.get(),
+                      'unitSalePrice': orderlinesbox3.get(),
+                  })
+
+        orderlinesbox2.delete(0, END)
+        orderlinesbox3.delete(0, END)
+
+        conn.commit()
+        conn.close()
+        displayCommand()
+
+
     # This def actually make changes to products table in DB
     def submitEditProduct():
         try:
@@ -627,11 +651,38 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
 
+    def orderLinesWindowsPopup():
+        global orderlinesAdd
+        orderlinesAdd = Tk()
+        orderlinesAdd.title("Add Item to this order")
+        orderlinesAdd.geometry('%dx%d+%d+%d' % (400, 250, x*1.5, y*1.5))
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        global orderlinesbox2
+        orderlinesbox2 = Entry(orderlinesAdd, width=30)
+        orderlinesbox2.grid(row=2, column=1, padx=20, pady=(10, 0))
+        global orderlinesbox3
+        orderlinesbox3 = Entry(orderlinesAdd, width=30)
+        orderlinesbox3.grid(row=3, column=1, padx=20, pady=(10, 0))
+
+        orderlinesbox2_label = Label(orderlinesAdd, text="SKU")
+        orderlinesbox2_label.grid(row=2, column=0, padx=20, pady=(10, 0))
+        orderlinesbox3_label = Label(orderlinesAdd, text="Unit Sale Price")
+        orderlinesbox3_label.grid(row=3, column=0, padx=20)
+
+        option_Add_btn = Button(orderlinesAdd, text="Add items to Orders", command=submitOrderlines)
+        option_Add_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+
+        conn.commit()
+        conn.close()
+
+
+
     def ordersAddWindowPopup():
         global ordersAdd
         ordersAdd = Tk()
         ordersAdd.title("Add record to orders")
-        ordersAdd.geometry('%dx%d+%d+%d' % (400, 250, x*1.5, y*1.5))
+        ordersAdd.geometry('%dx%d+%d+%d' % (400, 200, x*1.5, y*1.5))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -653,11 +704,11 @@ def MainScreen(tab,root):
         orderbox3_label = Label(ordersAdd, text="Status")
         orderbox3_label.grid(row=4, column=0, padx=20)
 
-        option_Add_btn = Button(ordersAdd, text="Add record to Orders", command=submitAddOrder)
-        option_Add_btn.grid(row=5, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+        option_Add_btn = Button(ordersAdd, text="Confirm New Order", command=submitAddOrder)
+        option_Add_btn.grid(row=7, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
         conn.commit()
-        conn.close()
+
 
     def vendorPricesAddWindowPopup():
         global vendorPriceAdd
@@ -867,6 +918,8 @@ def MainScreen(tab,root):
         edit_yes_button.grid(row=0, column=0, columnspan=2, pady=5, padx=1, ipadx=50)
         edit_no_button = Button(yesNoBox, text="No", command=editConfirmWindow.destroy)
         edit_no_button.grid(row=0, column=2, columnspan=2, pady=5, padx=1, ipadx=50)
+
+
 
     def deleteConfirm():  # need to MODIFY values in column when table content changes!!!!
         global deleteConfirmWindow
