@@ -1,0 +1,195 @@
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS states;
+DROP TABLE IF EXISTS zipLocations;
+DROP TABLE IF EXISTS vendors;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS vendorPrices;
+DROP TABLE IF EXISTS status;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS orderLines;
+DROP TABLE IF EXISTS inventory;
+
+create table categories(
+  categoryName VARCHAR(50) NOT NULL,
+  CONSTRAINT categories_pk PRIMARY KEY (categoryName)
+
+);
+
+create table states(
+  abbreviation VARCHAR(2) NOT NULL,
+  stateName VARCHAR(20),
+  CONSTRAINT states_pk PRIMARY KEY (abbreviation),
+  CONSTRAINT states_ck UNIQUE (stateName)
+);
+
+INSERT INTO states
+VALUES ('AL', 'Alabama'),
+        ('AK', 'Alaska'),
+        ('AZ', 'Arizona'),
+        ('AR', 'Arkansas'),
+        ('CA', 'California'),
+        ('CO', 'Colorado'),
+        ('CT', 'Connecticut'),
+        ('DE', 'Delaware'),
+        ('DC', 'District of Columbia'),
+        ('FL', 'Florida'),
+        ('GA', 'Georgia'),
+        ('HI', 'Hawaii'),
+        ('ID', 'Idaho'),
+        ('IL', 'Illinois'),
+        ('IN', 'Indiana'),
+        ('IA', 'Iowa'),
+        ('KS', 'Kansas'),
+        ('KY', 'Kentucky'),
+        ('LA', 'Louisiana'),
+        ('ME', 'Maine'),
+        ('MD', 'Maryland'),
+        ('MA', 'Massachusetts'),
+        ('MI', 'Michigan'),
+        ('MN', 'Minnesota'),
+        ('MS', 'Mississippi'),
+        ('MO', 'Missouri'),
+        ('MT', 'Montana'),
+        ('NE', 'Nebraska'),
+        ('NV', 'Nevada'),
+        ('NH', 'New Hampshire'),
+        ('NJ', 'New Jersey'),
+        ('NM', 'New Mexico'),
+        ('NY', 'New York'),
+        ('NC', 'North Carolina'),
+        ('ND', 'North Dakota'),
+        ('OH', 'Ohio'),
+        ('OK', 'Oklahoma'),
+        ('OR', 'Oregon'),
+        ('PA', 'Pennsylvania'),
+        ('PR', 'Puerto Rico'),
+        ('RI', 'Rhode Island'),
+        ('SC', 'South Carolina'),
+        ('SD', 'South Dakota'),
+        ('TN', 'Tennessee'),
+        ('TX', 'Texas'),
+        ('UT', 'Utah'),
+        ('VT', 'Vermont'),
+        ('VA', 'Virginia'),
+        ('WA', 'Washington'),
+        ('WV', 'West Virginia'),
+        ('WI', 'Wisconsin'),
+        ('WY', 'Wyoming');
+
+create table zipLocations(
+  zipCode INT NOT NULL,
+  city VARCHAR(30),
+  stateAbbr VARCHAR(2) NOT NULL,
+  CONSTRAINT zipLocations_pk PRIMARY KEY (zipCode),
+  CONSTRAINT state_zipLocations_fk FOREIGN KEY (stateAbbr) REFERENCES states(abbreviation)
+);
+
+create table vendors(
+  vendorName VARCHAR(50) NOT NULL,
+  phoneNumber VARCHAR(20),
+  email VARCHAR(50),
+  streetAddress VARCHAR (50),
+  websiteURL VARCHAR(50),
+  zipCode INT,
+  CONSTRAINT vendors_pk PRIMARY KEY (vendorName),
+  CONSTRAINT vendors_ck UNIQUE (phoneNumber),
+  CONSTRAINT vendors_ck2 UNIQUE (email),
+  CONSTRAINT zipLocations_vendors_fk FOREIGN KEY (zipCode) REFERENCES zipLocations(zipCode)
+);
+
+create table products(
+  SKU VARCHAR (25) NOT NULL,
+  category VARCHAR (50) DEFAULT 'N/A',
+  prodDesc VARCHAR NOT NULL,
+  productURL VARCHAR,
+  quantity VARCHAR (10) NOT NULL,
+  availability VARCHAR(10) NOT NULL,
+  reorderLevel double DEFAULT 0,
+  unitsInStock double DEFAULT 0,
+  CONSTRAINT products_pk PRIMARY KEY (SKU),
+  CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
+);
+
+
+create table vendorPrices(
+    vendorPriceID VARCHAR(50) NOT NULL,
+    vendorName VARCHAR(50),
+    SKU VARCHAR(25) NOT NULL,
+    unitListPrice DOUBLE NOT NULL,
+    timeChecked DateTime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT vendorPrices_pk PRIMARY KEY (vendorPriceID),
+    CONSTRAINT products_vendorPrices_fk FOREIGN KEY (SKU) REFERENCES products(SKU),
+    CONSTRAINT vendors_vendorPrices_fk FOREIGN KEY (vendorName) REFERENCES vendors(vendorName)
+);
+
+create table status(
+  status VARCHAR(10) NOT NULL,
+  CONSTRAINT status_pk PRIMARY KEY (status)
+);
+
+
+
+CREATE TABLE orders(
+    orderId VARCHAR (50) NOT NULL,
+    orderDate DATETIME,
+    orderStatus VARCHAR(10) NOT NULL,
+    CONSTRAINT orderID_pk PRIMARY KEY (orderID),
+    CONSTRAINT status_vendorPrice_fk FOREIGN KEY (orderStatus) REFERENCES status(status)
+);
+
+--use unitSalePrice for subtotal(ext price tx) and order total
+CREATE TABLE orderLines(
+    orderId VARCHAR (50) NOT NULL,
+    SKU VARCHAR(25) NOT NULL,
+    unitSalePrice double NOT NULL,
+    CONSTRAINT orderLines_pk PRIMARY KEY (orderID, SKU),
+    CONSTRAINT products_orderLines_fk FOREIGN KEY (SKU) REFERENCES products(SKU),
+    CONSTRAINT orders_orderLines_fk FOREIGN KEY (orderID) REFERENCES orders(orderID)
+);
+INSERT INTO categories VALUES ('Restaurant Supply');
+INSERT INTO vendors VALUES('Bestware', '+17147758082', 'support@bestware.com','10161 Bolsa Ave # 103C', 'https://bestware.com/', 92683);
+INSERT INTO zipLocations VALUES (92683,'Westminster','CA');
+
+--INSERT INTO products(SKU, prodDesc, productURL, quantity, availability) VALUES('PP-828', 'Pp Bread Bags','https://bestwareshop.com/products/pp-bread-bags','2000/CS',True);
+
+SELECT *
+FROM products
+INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+WHERE products.SKU LIKE 'C9130';
+
+SELECT *
+FROM products
+WHERE sku = 'RFM-2W';
+
+
+SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
+    FROM products
+    INNER JOIN vendorPrices vP on products.SKU = vP.SKU
+    INNER JOIN vendors v on v.vendorName = vP.vendorName;
+
+SELECT *,oid FROM orders
+ORDER BY orderDate DESC
+
+
+SELECT o.orderId, o.orderDate, oL.SKU, o.orderStatus
+    FROM orders o
+    INNER JOIN orderLines oL on o.orderId = oL.orderId
+    INNER JOIN status s on o.orderStatus = s.status
+    INNER JOIN products p on p.SKU = oL.SKU
+    INNER JOIN vendorPrices vP on oL.SKU = vP.SKU
+GROUP BY o.orderID, oL.SKU
+ORDER BY o.orderDate DESC;
+
+
+SELECT v.vendorName, v.phoneNumber, v.email, v.streetAddress, zL.zipCode, zL.city, zL.stateAbbr, v.websiteURL
+    FROM vendors v
+        INNER JOIN zipLocations zL on zL.zipCode = v.zipCode
+ORDER BY vendorName
+
+
+SELECT v.vendorName, p.prodDesc, unitListPrice, timeChecked
+    FROM vendors v
+        INNER JOIN vendorPrices vP on v.vendorName = vP.vendorName
+        INNER JOIN products p on p.SKU = vP.SKU
+GROUP BY v.vendorName, p.prodDesc, unitListPrice, timeChecked
+ORDER BY prodDesc
