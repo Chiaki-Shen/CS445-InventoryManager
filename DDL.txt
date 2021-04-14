@@ -112,7 +112,7 @@ create table products(
 
 
 create table vendorPrices(
-    vendorPriceID VARCHAR(50) NOT NULL,
+    vendorPriceID INTEGER NOT NULL,
     vendorName VARCHAR(50),
     SKU VARCHAR(25) NOT NULL,
     unitListPrice DOUBLE NOT NULL,
@@ -127,7 +127,7 @@ create table status(
   CONSTRAINT status_pk PRIMARY KEY (status)
 );
 
-
+INSERT INTO status VALUES ('Processing'), ('Shipped'), ('Delivered'), ('Other');
 
 CREATE TABLE orders(
     orderId VARCHAR (50) NOT NULL,
