@@ -439,6 +439,7 @@ def MainScreen(tab,root):
         orderbox3.delete(0, END)
 
         conn.commit()
+        ordersAdd.destroy()
         orderLinesWindowsPopup()
 
 
