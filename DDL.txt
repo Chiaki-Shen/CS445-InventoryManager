@@ -1,4 +1,4 @@
-DROP TABLE IF EXISTS categories;
+---DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS states;
 DROP TABLE IF EXISTS zipLocations;
 DROP TABLE IF EXISTS vendors;
@@ -9,11 +9,10 @@ DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS orderLines;
 DROP TABLE IF EXISTS inventory;
 
-create table categories(
-  categoryName VARCHAR(50) NOT NULL,
-  CONSTRAINT categories_pk PRIMARY KEY (categoryName)
-
-);
+---create table categories(
+---  categoryName VARCHAR(50) NOT NULL,
+---  CONSTRAINT categories_pk PRIMARY KEY (categoryName)
+---);
 
 create table states(
   abbreviation VARCHAR(2) NOT NULL,
@@ -99,16 +98,17 @@ create table vendors(
 
 create table products(
   SKU VARCHAR (25) NOT NULL,
-  category VARCHAR (50) DEFAULT 'N/A',
+ --- category VARCHAR (50) DEFAULT 'N/A',
   prodDesc VARCHAR NOT NULL,
   productURL VARCHAR,
   quantity VARCHAR (10) NOT NULL,
   availability VARCHAR(10) NOT NULL,
   reorderLevel double DEFAULT 0,
   unitsInStock double DEFAULT 0,
-  CONSTRAINT products_pk PRIMARY KEY (SKU),
-  CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
+  CONSTRAINT products_pk PRIMARY KEY (SKU)
+ --- CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
 );
+
 
 
 create table vendorPrices(
@@ -141,55 +141,56 @@ CREATE TABLE orders(
 CREATE TABLE orderLines(
     orderId VARCHAR (50) NOT NULL,
     SKU VARCHAR(25) NOT NULL,
-    unitSalePrice double NOT NULL,
+    itemQuantity double NOT NULL,
     CONSTRAINT orderLines_pk PRIMARY KEY (orderID, SKU),
     CONSTRAINT products_orderLines_fk FOREIGN KEY (SKU) REFERENCES products(SKU),
     CONSTRAINT orders_orderLines_fk FOREIGN KEY (orderID) REFERENCES orders(orderID)
 );
-INSERT INTO categories VALUES ('Restaurant Supply');
+---INSERT INTO categories VALUES ('Restaurant Supply');
 INSERT INTO vendors VALUES('Bestware', '+17147758082', 'support@bestware.com','10161 Bolsa Ave # 103C', 'https://bestware.com/', 92683);
 INSERT INTO zipLocations VALUES (92683,'Westminster','CA');
 
---INSERT INTO products(SKU, prodDesc, productURL, quantity, availability) VALUES('PP-828', 'Pp Bread Bags','https://bestwareshop.com/products/pp-bread-bags','2000/CS',True);
-
-SELECT *
-FROM products
-INNER JOIN vendorPrices vP on products.SKU = vP.SKU
-WHERE products.SKU LIKE 'C9130';
-
-SELECT *
-FROM products
-WHERE sku = 'RFM-2W';
-
-
-SELECT v.vendorName, products.SKU, products.prodDesc, unitListPrice, timeChecked
-    FROM products
-    INNER JOIN vendorPrices vP on products.SKU = vP.SKU
-    INNER JOIN vendors v on v.vendorName = vP.vendorName;
-
-SELECT *,oid FROM orders
-ORDER BY orderDate DESC
-
-
-SELECT o.orderId, o.orderDate, oL.SKU, o.orderStatus
+--- ORDERLINE SUBTOTAL
+SELECT oL.SKU, p.prodDesc, unitListPrice, itemQuantity,
+       (unitListPrice * itemQuantity) AS subtotal
     FROM orders o
-    INNER JOIN orderLines oL on o.orderId = oL.orderId
-    INNER JOIN status s on o.orderStatus = s.status
-    INNER JOIN products p on p.SKU = oL.SKU
-    INNER JOIN vendorPrices vP on oL.SKU = vP.SKU
-GROUP BY o.orderID, oL.SKU
-ORDER BY o.orderDate DESC;
+        INNER JOIN orderLines oL on o.orderId = oL.orderId
+        INNER JOIN products p on p.SKU = oL.SKU
+        INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+WHERE o.orderId = '010a5635-c0f3-496a-b20f-397d6cdbfa83'
+GROUP BY o.orderID, oL.SKU;
 
 
-SELECT v.vendorName, v.phoneNumber, v.email, v.streetAddress, zL.zipCode, zL.city, zL.stateAbbr, v.websiteURL
-    FROM vendors v
-        INNER JOIN zipLocations zL on zL.zipCode = v.zipCode
-ORDER BY vendorName
+-- Show Order Total Sum
+SELECT SUM(unitListPrice * itemQuantity)
+    FROM orders o
+        INNER JOIN orderLines oL on o.orderId = oL.orderId
+        INNER JOIN products p on p.SKU = oL.SKU
+        INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+WHERE o.orderId = '010a5635-c0f3-496a-b20f-397d6cdbfa83'
+GROUP BY o.orderID;
+
+--- ORDER TOTALS
+SELECT o.orderID, o.orderDate, o.orderStatus,
+        (SELECT COUNT(oL.sku)
+            FROM orderLines oL
+        WHERE o.orderId =oL.orderId )AS number_of_items,
+       ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+    FROM orders o
+        INNER JOIN orderLines oL on o.orderId = oL.orderId
+        INNER JOIN products p on p.SKU = oL.SKU
+        INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+GROUP BY o.orderID, o.orderDate
 
 
-SELECT v.vendorName, p.prodDesc, unitListPrice, timeChecked
-    FROM vendors v
-        INNER JOIN vendorPrices vP on v.vendorName = vP.vendorName
-        INNER JOIN products p on p.SKU = vP.SKU
-GROUP BY v.vendorName, p.prodDesc, unitListPrice, timeChecked
-ORDER BY prodDesc
+SELECT SKU, prodDesc, productURL, quantity, reorderLevel, unitsInStock
+    FROM products
+WHERE availability LIKE 'TRUE';
+
+
+SELECT SKU, prodDesc, productURL, quantity, reorderLevel, unitsInStock
+    FROM products
+WHERE unitsInStock != 0;
+
+
+
