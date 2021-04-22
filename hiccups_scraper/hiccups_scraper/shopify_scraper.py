@@ -2,35 +2,38 @@ import requests
 import json
 import pandas as pd
 
-productlist = []
 
-for x in range(1, 50):
+def get_bestware_products(output):
+    #productlist = []
 
-    url = 'https://bestwareshop.com/products.json?limit=250&page=' + str(x)
-    r = requests.get(url)
+    for x in range(1, 50):
 
-    data = r.json()
+        url = 'https://bestwareshop.com/products.json?limit=250&page=' + str(x)
+        r = requests.get(url)
 
-    for item in data['products']:
-        title = item['title']
-        handle = item['handle']
-        for variant in item['variants']:
-            price = variant['price']
-            quantity = variant['option1']
-            sku = variant['sku']
-            available = variant['available']
+        data = r.json()
 
-            product = {
-                'title': title.replace('?', ''),
-                'handle': 'https://bestwareshop.com/products/' + handle,
-                'price': price,
-                'sku': sku,
-                'quantity': quantity,
-                'available': available
-            }
+        for item in data['products']:
+            title = item['title']
+            handle = item['handle']
+            for variant in item['variants']:
+                price = variant['price']
+                quantity = variant['option1']
+                sku = variant['sku']
+                available = variant['available']
 
-            productlist.append(product)
+                product = {
+                    'title': title.replace('?', ''),
+                    'handle': 'https://bestwareshop.com/products/' + handle,
+                    'price': price,
+                    'sku': sku,
+                    'quantity': quantity,
+                    'available': available
+                }
 
-df = pd.DataFrame(productlist)
-df.to_csv('Bestware.csv')
-print('Proucts saved to Bestware.csv')
+                output.append(product)
+    #return productlist
+
+# df = pd.DataFrame(productlist)
+# df.to_csv('Bestware.csv')
+# print('Proucts saved to Bestware.csv')
