@@ -240,7 +240,8 @@ def MainScreen(tab,root):
                             INNER JOIN orderLines oL on o.orderId = oL.orderId
                             INNER JOIN products p on p.SKU = oL.SKU
                             INNER JOIN vendorPrices vP on p.SKU = vP.SKU
-                    GROUP BY o.orderID, o.orderDate''')
+                    GROUP BY o.orderID, o.orderDate
+                    ORDER BY o.orderDate''')
         records = c.fetchall()
 
         for row in display_Orders_ContentTree.get_children():
@@ -450,12 +451,21 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
-        c.execute("INSERT INTO orderLines VALUES (:id, :SKU,:unitSalePrice)",
+        c.execute("INSERT INTO orderLines VALUES (:id, :SKU,:itemQuantity)",
                   {
                       'id': orderId,
                       'SKU': orderlinesbox2.get(),
-                      'unitSalePrice': orderlinesbox3.get(),
+                      'itemQuantity': orderlinesbox3.get(),
                   })
+
+        c.execute('''UPDATE products
+                  SET
+                      unitsInStock = :stock + unitsInStock
+                    WHERE SKU = :sku''',
+                    {
+                        'stock': orderlinesbox3.get(),
+                        'sku': orderlinesbox2.get(),
+                    })
 
         orderlinesbox2.delete(0, END)
         orderlinesbox3.delete(0, END)
@@ -707,7 +717,7 @@ def MainScreen(tab,root):
 
         orderlinesbox2_label = Label(orderlinesAdd, text="SKU")
         orderlinesbox2_label.grid(row=2, column=0, padx=20, pady=(10, 0))
-        orderlinesbox3_label = Label(orderlinesAdd, text="Unit Sale Price")
+        orderlinesbox3_label = Label(orderlinesAdd, text="Item Quantity")
         orderlinesbox3_label.grid(row=3, column=0, padx=20)
 
         option_Add_btn = Button(orderlinesAdd, text="Add items to Orders", command=submitOrderlines)
@@ -852,7 +862,8 @@ def MainScreen(tab,root):
         productEditbox5.insert(0, valuesInColumn[4])
         productEditbox6.insert(0, valuesInColumn[5])
         productEditbox7.insert(0, valuesInColumn[6])
-        productEditbox8.insert(0, valuesInColumn[7])
+
+
         conn.commit()
         conn.close()
 
