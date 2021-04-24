@@ -32,6 +32,7 @@ def get_bestware_products(output):
                 }
 
                 output.append(product)
+        data.clear()
     #return productlist
 
 # df = pd.DataFrame(productlist)
