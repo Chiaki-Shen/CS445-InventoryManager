@@ -11,7 +11,7 @@ import time
 bestware_products = []
 
 
-def thread(name, productbox):
+def bestware_thread(name, productbox):
     
     print("thread {} started".format(name))
     while True:
@@ -38,9 +38,12 @@ def vendors(tab):
     productbox.heading("#1", text=" URL")
     productbox.heading("#2", text=" Price")
 
-    x = threading.Thread(target=thread, args=("new thread", productbox))
+    #starts the thread that pulls info from bestware
+    x = threading.Thread(target=bestware_thread, args=("new thread", productbox))
     x.daemon = True
     x.start()
+
+    #starts thread that pulls the info from the lollicup store
 
     conn = sqlite3.connect('Hiccups.db')  # create a DB if there is not one
     c = conn.cursor()
