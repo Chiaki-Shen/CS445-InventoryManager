@@ -202,6 +202,7 @@ def MainScreen(tab,root):
         for row in display_Products_ContentTree.get_children():
             display_Products_ContentTree.delete(row)
 
+
         for row in records:
             print(row)
             display_Products_ContentTree.insert("", tk.END, values=row)
@@ -232,15 +233,16 @@ def MainScreen(tab,root):
         c = conn.cursor()
         # Query DB
         c.execute('''SELECT o.orderID, o.orderDate, o.orderStatus,
-                            (SELECT COUNT(oL.sku) 
-                                FROM orderLines oL 
-                            WHERE o.orderId =oL.orderId )AS number_of_items, 
-                            ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+                            (SELECT SUM(oL.itemQuantity)
+                                FROM orderLines oL
+                            WHERE o.orderId =oL.orderId )AS "Total Quantity",
+                           ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
                         FROM orders o
                             INNER JOIN orderLines oL on o.orderId = oL.orderId
                             INNER JOIN products p on p.SKU = oL.SKU
                             INNER JOIN vendorPrices vP on p.SKU = vP.SKU
-                    GROUP BY o.orderID, o.orderDate''')
+                    GROUP BY o.orderID, o.orderDate
+                    ORDER BY o.orderDate;''')
         records = c.fetchall()
 
         for row in display_Orders_ContentTree.get_children():
@@ -338,10 +340,9 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
-        c.execute("INSERT INTO products VALUES (:sku, :cate,:desc,:url, :quan,:avail, :level, :stock)",
+        c.execute("INSERT INTO products VALUES (:sku,:desc,:url, :quan,:avail, :level, :stock)",
                   {
                       'sku': productbox1.get(),
-                      'cate': productbox2.get(),
                       'desc': productbox3.get(),
                       'url': productbox4.get(),
                       'quan': productbox5.get(),
@@ -349,13 +350,9 @@ def MainScreen(tab,root):
                       'level': productbox7.get(),
                       'stock': productbox8.get(),
                   })
-        c.execute("INSERT INTO categories VALUES (:name)",
-                  {
-                      'name': productbox2.get()
-                  })
+
         # Clear the text box
         productbox1.delete(0, END)
-        productbox2.delete(0, END)
         productbox3.delete(0, END)
         productbox4.delete(0, END)
         productbox5.delete(0, END)
@@ -450,12 +447,21 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
-        c.execute("INSERT INTO orderLines VALUES (:id, :SKU,:unitSalePrice)",
+        c.execute("INSERT INTO orderLines VALUES (:id, :SKU,:itemQuantity)",
                   {
                       'id': orderId,
                       'SKU': orderlinesbox2.get(),
-                      'unitSalePrice': orderlinesbox3.get(),
+                      'itemQuantity': orderlinesbox3.get(),
                   })
+
+        c.execute('''UPDATE products
+                  SET
+                      unitsInStock = :stock + unitsInStock
+                    WHERE SKU = :sku''',
+                    {
+                        'stock': orderlinesbox3.get(),
+                        'sku': orderlinesbox2.get(),
+                    })
 
         orderlinesbox2.delete(0, END)
         orderlinesbox3.delete(0, END)
@@ -591,46 +597,41 @@ def MainScreen(tab,root):
         global productbox1
         productbox1 = Entry(productAdd, width=30)  # product Code
         productbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
-        global productbox2
-        productbox2 = Entry(productAdd, width=30)  # product Desc
-        productbox2.grid(row=3, column=1, padx=20, pady=(10, 0))
         global productbox3
         productbox3 = Entry(productAdd, width=30)
-        productbox3.grid(row=4, column=1, padx=20, pady=(10, 0))
+        productbox3.grid(row=3, column=1, padx=20, pady=(10, 0))
         global productbox4
         productbox4 = Entry(productAdd, width=30)
-        productbox4.grid(row=5, column=1, padx=20, pady=(10, 0))
+        productbox4.grid(row=4, column=1, padx=20, pady=(10, 0))
         global productbox5
         productbox5 = Entry(productAdd, width=30)
-        productbox5.grid(row=6, column=1, padx=20, pady=(10, 0))
+        productbox5.grid(row=5, column=1, padx=20, pady=(10, 0))
         global productbox6
         productbox6 = Entry(productAdd, width=30)
-        productbox6.grid(row=7, column=1, padx=20, pady=(10, 0))
+        productbox6.grid(row=6, column=1, padx=20, pady=(10, 0))
         global productbox7
         productbox7 = Entry(productAdd, width=30)
-        productbox7.grid(row=8, column=1, padx=20, pady=(10, 0))
+        productbox7.grid(row=7, column=1, padx=20, pady=(10, 0))
         global productbox8
         productbox8 = Entry(productAdd, width=30)
-        productbox8.grid(row=9, column=1, padx=20, pady=(10, 0))
+        productbox8.grid(row=8, column=1, padx=20, pady=(10, 0))
         # Create labels for display
         box1_label = Label(productAdd, text="SKU")
         box1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
-        box2_label = Label(productAdd, text="Category")
-        box2_label.grid(row=3, column=0, padx=20)
         box3_label = Label(productAdd, text="Product Description")
-        box3_label.grid(row=4, column=0, padx=20)
+        box3_label.grid(row=3, column=0, padx=20)
         box4_label = Label(productAdd, text="Product URL")
-        box4_label.grid(row=5, column=0, padx=20)
+        box4_label.grid(row=4, column=0, padx=20)
         box5_label = Label(productAdd, text="Quantity")
-        box5_label.grid(row=6, column=0, padx=20)
+        box5_label.grid(row=5, column=0, padx=20)
         box6_label = Label(productAdd, text="Availability")
-        box6_label.grid(row=7, column=0, padx=20)
+        box6_label.grid(row=6, column=0, padx=20)
         box7_label = Label(productAdd, text="Reorder Level")
-        box7_label.grid(row=8, column=0, padx=20)
+        box7_label.grid(row=7, column=0, padx=20)
         box8_label = Label(productAdd, text="Units In Stock")
-        box8_label.grid(row=9, column=0, padx=20)
+        box8_label.grid(row=8, column=0, padx=20)
         option_Add_btn = Button(productAdd, text="Add Product", command=submitAddProduct)
-        option_Add_btn.grid(row=10, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
+        option_Add_btn.grid(row=9, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
         conn.commit()
         conn.close()
@@ -695,7 +696,7 @@ def MainScreen(tab,root):
         global orderlinesAdd
         orderlinesAdd = Tk()
         orderlinesAdd.title("Add Item to this order")
-        orderlinesAdd.geometry('%dx%d+%d+%d' % (400, 250, x*1.5, y*1.5))
+        orderlinesAdd.geometry('%dx%d+%d+%d' % (350, 120, x*1.5, y*1.5))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         global orderlinesbox2
@@ -707,7 +708,7 @@ def MainScreen(tab,root):
 
         orderlinesbox2_label = Label(orderlinesAdd, text="SKU")
         orderlinesbox2_label.grid(row=2, column=0, padx=20, pady=(10, 0))
-        orderlinesbox3_label = Label(orderlinesAdd, text="Unit Sale Price")
+        orderlinesbox3_label = Label(orderlinesAdd, text="Item Quantity")
         orderlinesbox3_label.grid(row=3, column=0, padx=20)
 
         option_Add_btn = Button(orderlinesAdd, text="Add items to Orders", command=submitOrderlines)
@@ -722,7 +723,7 @@ def MainScreen(tab,root):
         global ordersAdd
         ordersAdd = Tk()
         ordersAdd.title("Add record to orders")
-        ordersAdd.geometry('%dx%d+%d+%d' % (400, 200, x*1.5, y*1.5))
+        ordersAdd.geometry('%dx%d+%d+%d' % (350, 120, x*1.5, y*1.5))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -852,7 +853,8 @@ def MainScreen(tab,root):
         productEditbox5.insert(0, valuesInColumn[4])
         productEditbox6.insert(0, valuesInColumn[5])
         productEditbox7.insert(0, valuesInColumn[6])
-        productEditbox8.insert(0, valuesInColumn[7])
+
+
         conn.commit()
         conn.close()
 
@@ -972,11 +974,11 @@ def MainScreen(tab,root):
         if (tableOndisplay.currentTable == "products"):
                 selectColumn = display_Products_ContentTree.focus()
                 valuesInColumn = display_Products_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("products", valuesInColumn[8])
+                columnAxis = treeCurrentdisplay("products", valuesInColumn[7])
         elif (tableOndisplay.currentTable == "vendors"):
                 selectColumn = display_Vendors_ContentTree.focus()
                 valuesInColumn = display_Vendors_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("vendors", valuesInColumn[8])
+                columnAxis = treeCurrentdisplay("vendors", valuesInColumn[6])
         elif (tableOndisplay.currentTable == "orders"):
                 selectColumn = display_Orders_ContentTree.focus()
                 valuesInColumn = display_Orders_ContentTree.item(selectColumn, "values")
@@ -1016,7 +1018,7 @@ def MainScreen(tab,root):
         display_Products_ContentTree.heading("#7", text="Units In Stock")
 
         display_Products_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1600x460")
+        root.geometry("1300x460")
 
     def displayVendorsWindowSetUp():
         global tableOndisplay
@@ -1049,13 +1051,13 @@ def MainScreen(tab,root):
         global display_Orders_ContentTree
         display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings')
         display_Orders_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
-        display_Orders_ContentTree.heading("#1", text="order ID")
+        display_Orders_ContentTree.heading("#1", text="Order ID")
         display_Orders_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#2", text="Order Date")
         display_Orders_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
-        display_Orders_ContentTree.heading("#3", text="order Status")
+        display_Orders_ContentTree.heading("#3", text="Order Status")
         display_Orders_ContentTree.column("#4", width=180, minwidth=80, anchor=tk.CENTER)
-        display_Orders_ContentTree.heading("#4", text="Number of Items")
+        display_Orders_ContentTree.heading("#4", text="Total Quantity")
         display_Orders_ContentTree.column("#5", width=180, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#5", text="Order Total")
 
