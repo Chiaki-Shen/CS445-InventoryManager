@@ -2,7 +2,7 @@
 from tkinter import ttk
 import tkinter as tk
 from frontEnd_V0_3 import MainScreen
-from report import plot
+'''from report import plot'''
 from tkinter import *
 
 root = tk.Tk()
@@ -22,7 +22,7 @@ tabControl.add(tab1, text="Main Tab")
 tabControl.add(tab2, text="Monthly Reports")
 tabControl.grid(row=0, column=0)
 MainScreen(tab1,root)
-plot(tab2)
+'''plot(tab2)'''
 style = ttk.Style(root)
 style.theme_use("winnative")
 style.configure('Treeview', rowheight=34)
