@@ -139,34 +139,135 @@ def MainScreen(tab,root):
         elif (tableOndisplay.currentTable == "orders"):
             submitEditOrders()
 
+    def askQuantityPopUp():
+
+        global quantityAdd
+        quantityAdd = Tk()
+        quantityAdd.title("Adding to Cart")
+        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*1.5, y*1.5))
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+
+        global quantitybox1
+        quantitybox1 = Entry(quantityAdd, width=30)  # product Code
+        quantitybox1.grid(row=3, column=0, padx=20, pady=(10, 0))
+        box = Label(quantityAdd, text="How many you want to buy?")
+        box.grid(row=2, column=0, padx=20, pady=(10, 0))
+
+        option_Add_btn = Button(quantityAdd, text="Add", command=submitAddCart)
+        option_Add_btn.grid(row=5, column=0, columnspan=2, pady=10, padx=20, ipadx=50)
+
+        conn.commit()
+        conn.close()
+
+    def askQuantityPopUp2():
+
+        global quantityAdd
+        quantityAdd = Tk()
+        quantityAdd.title("Adding to Cart")
+        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*1.5, y*1.5))
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+
+        global quantitybox1
+        quantitybox1 = Entry(quantityAdd, width=30)  # product Code
+        quantitybox1.grid(row=3, column=0, padx=20, pady=(10, 0))
+        box = Label(quantityAdd, text="How many you want to buy?")
+        box.grid(row=2, column=0, padx=20, pady=(10, 0))
+
+        option_Add_btn = Button(quantityAdd, text="Add", command=submitAddCartFromSummaryTable)
+        option_Add_btn.grid(row=5, column=0, columnspan=2, pady=10, padx=20, ipadx=50)
+
+        conn.commit()
+        conn.close()
+
+
 
     def submitAddCart():
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
+
         selectColumn = display_Products_ContentTree.focus()
         valuesInColumn = display_Products_ContentTree.item(selectColumn, "values")
+
 
         mycart = []
         mycart.append(valuesInColumn[0])
         mycart.append(valuesInColumn[1])
         mycart.append(valuesInColumn[2])
-        mycart.append(valuesInColumn[5])
         mycart.append(valuesInColumn[6])
 
+        c.execute("SELECT unitListPrice FROM products p INNER JOIN vendorPrices vP on p.SKU = vP.SKU WHERE p.SKU = ?", (mycart[0],))
+        unitPrice = c.fetchone()
+        mycart.append(unitPrice[0])
+        mycart.append(quantitybox1.get())
 
 
-        c.execute("INSERT INTO cart VALUES (:SKU, :prodDesc, :productURL, :reorderLevel, :unitsInStock)",
-                  {
-                      'SKU': mycart[0],
-                      'prodDesc': mycart[1],
-                      'productURL': mycart[2],
-                      'reorderLevel': mycart[3],
-                      'unitsInStock': mycart[4],
-                  })
+
+        try:
+            c.execute("INSERT INTO cart VALUES (:SKU, :prodDesc, :productURL, :unitsInStock, :Quantity, :unitPrice, :totalPrice )",
+                      {
+                          'SKU': mycart[0],
+                          'prodDesc': mycart[1],
+                          'productURL': mycart[2],
+                          'unitsInStock': mycart[3],
+                          'Quantity': mycart[5],
+                          'unitPrice': mycart[4],
+                          'totalPrice': float(mycart[4]) * float(mycart[5])
+                      })
+            quantitybox1.delete(0,END)
+        except:
+            messagebox.showwarning('Failed adding', 'You have already add this one to the cart.')
+
 
         conn.commit()
         conn.close()
+        quantityAdd.destroy()
+
+    def submitAddCartFromSummaryTable():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+
+
+        selectColumn = mainPageQuery_ContentTree.focus()
+        valuesInColumn = mainPageQuery_ContentTree.item(selectColumn, "values")
+
+
+        mycart = []
+        mycart.append(valuesInColumn[1])
+        mycart.append(valuesInColumn[2])
+        c.execute("SELECT productURL FROM products WHERE SKU = ?",(mycart[0],))
+        url = c.fetchone()
+        c.execute("SELECT unitsInStock FROM products WHERE SKU = ?",(mycart[0],))
+        stock = c.fetchone()
+        c.execute("SELECT unitListPrice FROM products p INNER JOIN vendorPrices vP on p.SKU = vP.SKU WHERE p.SKU = ?", (mycart[0],))
+        unitPrice = c.fetchone()
+        mycart.append(url[0])
+        mycart.append(stock[0])
+        mycart.append(unitPrice[0])
+        mycart.append(quantitybox1.get())
+
+        try:
+            c.execute("INSERT INTO cart VALUES (:SKU, :prodDesc, :productURL, :unitsInStock, :Quantity, :unitPrice, :totalPrice)",
+                      {
+                          'SKU': mycart[0],
+                          'prodDesc': mycart[1],
+                          'productURL': mycart[2],
+                          'unitsInStock': mycart[3],
+                          'Quantity': mycart[5],
+                          'unitPrice':mycart[4],
+                          'totalPrice':float(mycart[4]) * float(mycart[5])
+
+                      })
+            quantitybox1.delete(0,END)
+        except:
+            messagebox.showwarning('Failed adding', 'You have already add this one to the cart.')
+
+
+        conn.commit()
+        conn.close()
+        quantityAdd.destroy()
 
 
     def addCart():
@@ -175,7 +276,15 @@ def MainScreen(tab,root):
             if (selectColumn == ""):
                 return 0
             print("Adding products")
-            submitAddCart()
+            askQuantityPopUp()
+        elif(tableOndisplay.currentTable == "Product on Market"):
+            selectColumn = mainPageQuery_ContentTree.focus()
+            if (selectColumn == ""):
+                return 0
+            print("Adding products")
+            askQuantityPopUp2()
+        else:
+            messagebox.showwarning('Failed', 'You have to switch to product table before adding')
 
 
     def showCart():
@@ -191,6 +300,7 @@ def MainScreen(tab,root):
         for row in records:
             print(row)
             tree.insert("", tk.END, values=row)
+
         conn.commit()
         conn.close()
 
@@ -199,11 +309,11 @@ def MainScreen(tab,root):
         cart = Toplevel()
         message = "Cart"
         Label(cart, text=message).pack()
-        new_element_header = ["SKU", "Prod Description", "Product URL", "Reorder Level", "Units In Stock"]
+        new_element_header = ["SKU", "Prod Description", "Product URL", "Units In Stock", "Quantity", "unitPrice", "Total"]
         treeScroll = ttk.Scrollbar(cart)
         treeScroll.pack(side=RIGHT, fill=Y)
         global tree
-        cart.geometry('%dx%d+%d+%d' % (800, 600, x*1.5, y*1.5))
+        cart.geometry('%dx%d+%d+%d' % (1000, 600, x*1.5, y*1.5))
         tree = ttk.Treeview(cart, columns=new_element_header, show="headings", yscrollcommand=treeScroll)
         tree.column("SKU", width=120, minwidth=100, anchor=tk.CENTER)
         tree.heading("SKU", text="SKU")
@@ -214,8 +324,14 @@ def MainScreen(tab,root):
         tree.column("Product URL", width=200, minwidth=100, anchor=tk.CENTER)
         tree.heading("Product URL", text="Product URL")
 
-        tree.column("Reorder Level", width=100, minwidth=100, anchor=tk.CENTER)
-        tree.heading("Reorder Level", text="Level")
+        tree.column("Quantity", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.heading("Quantity", text="Quantity")
+
+        tree.column("Total", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.heading("Total", text="Total")
+
+        tree.column("unitPrice", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.heading("unitPrice", text="unitPrice")
 
         tree.column("Units In Stock", width=100, minwidth=100, anchor=tk.CENTER)
         tree.heading("Units In Stock", text="Stock")
@@ -227,15 +343,19 @@ def MainScreen(tab,root):
 
 
     def newCart():
+
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
+
         c.execute("DROP TABLE IF EXISTS cart;")
         c.execute('''CREATE TABLE cart(
                           SKU VARCHAR (25) NOT NULL,
                           prodDesc VARCHAR NOT NULL,
                           productURL VARCHAR,
-                          reorderLevel double DEFAULT 'N/A',
                           unitsInStock double DEFAULT 0,
+                          Quantity double DEFAULT 1,
+                          unitPrice double,
+                          totalPrice double,
                           CONSTRAINT products_pk PRIMARY KEY (SKU)
                     );''')
         messagebox.showinfo("Success", "Your cart has been cleared")
@@ -243,7 +363,57 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
 
+    def PlaceOrder():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        # Query DB
 
+        c.execute("SELECT COUNT(SKU) FROM cart;")
+        count = c.fetchone()
+        num = count[0]
+
+        c.execute("SELECT SKU FROM cart")
+        SKUs = c.fetchall()
+        listoutput = [i[0] for i in SKUs]
+
+
+
+        c.execute("SELECT quantity FROM cart")
+        Quantities = c.fetchall()
+        listoutput2 = [i[0] for i in Quantities]
+
+
+
+
+
+        uid_str = uuid.uuid4().urn
+        orderId = uid_str[9:]
+
+        c.execute("INSERT INTO orders VALUES (:id, :date,:orderStatus)",
+                  {
+                      'id': orderId,
+                      'date': date.today(),
+                      'orderStatus': 'Processing'
+                  })
+
+        for i in range (0, int(num)):
+            c.execute("INSERT INTO orderLines VALUES (:id, :SKU,:itemQuantity)",
+                            {
+                                  'id': orderId,
+                                  'SKU': listoutput[i],
+                                  'itemQuantity': listoutput2[i]
+                              })
+            c.execute('''UPDATE products
+                              SET
+                                  unitsInStock = :stock + unitsInStock
+                                WHERE SKU = :sku''',
+                                {
+                                    'stock': listoutput2[i],
+                                    'sku':listoutput[i]
+                                })
+        conn.commit()
+        conn.close()
+        newCart()
 
     def displayCommand():
         SummaryTreeRemove()
@@ -707,6 +877,8 @@ def MainScreen(tab,root):
         global productbox1
         productbox1 = Entry(productAdd, width=30)  # product Code
         productbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
+        box1_label = Label(productAdd, text="SKU")
+        box1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
         global productbox3
         productbox3 = Entry(productAdd, width=30)
         productbox3.grid(row=3, column=1, padx=20, pady=(10, 0))
@@ -1075,37 +1247,41 @@ def MainScreen(tab,root):
 
 
     def deleteConfirm():  # need to MODIFY values in column when table content changes!!!!
-        global deleteConfirmWindow
-        deleteConfirmWindow = tk.Tk()
-        deleteConfirmWindow.title('Delete Confirm')
-        deleteConfirmWindow.geometry('%dx%d+%d+%d' % (310, 140, x*1.5, y*1.5))
-        #Issue fixed
-        global columnAxis
-        if (tableOndisplay.currentTable == "products"):
-                selectColumn = display_Products_ContentTree.focus()
-                valuesInColumn = display_Products_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("products", valuesInColumn[7])
-        elif (tableOndisplay.currentTable == "vendors"):
-                selectColumn = display_Vendors_ContentTree.focus()
-                valuesInColumn = display_Vendors_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("vendors", valuesInColumn[6])
-        elif (tableOndisplay.currentTable == "orders"):
-                selectColumn = display_Orders_ContentTree.focus()
-                valuesInColumn = display_Orders_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("orders", valuesInColumn[2])
-        elif (tableOndisplay.currentTable == "vendorPrices"):
-                selectColumn = display_VendorPrices_ContentTree.focus()
-                valuesInColumn = display_VendorPrices_ContentTree.item(selectColumn, "values")
-                columnAxis = treeCurrentdisplay("vendorPrices", valuesInColumn[5])
-        print(selectColumn)
-        confirm_message = Label(deleteConfirmWindow, text="Are you sure you want to delete selected column?", padx=10, pady=10)
-        confirm_message.grid(row=0, column=0, pady=10)
-        yesNoBox = Frame(deleteConfirmWindow)
-        yesNoBox.grid(row=1, column=0, padx=20, pady=(10, 0))
-        edit_yes_button = Button(yesNoBox, text="Yes", command=submitDeleteCommand)
-        edit_yes_button.grid(row=0, column=0, columnspan=2, pady=5, padx=1, ipadx=50)
-        edit_no_button = Button(yesNoBox, text="No", command=deleteConfirmWindow.destroy)
-        edit_no_button.grid(row=0, column=2, columnspan=2, pady=5, padx=1, ipadx=50)
+        try:
+            global deleteConfirmWindow
+            deleteConfirmWindow = tk.Tk()
+            deleteConfirmWindow.title('Delete Confirm')
+            deleteConfirmWindow.geometry('%dx%d+%d+%d' % (310, 140, x*1.5, y*1.5))
+            #Issue fixed
+            global columnAxis
+            if (tableOndisplay.currentTable == "products"):
+                    selectColumn = display_Products_ContentTree.focus()
+                    valuesInColumn = display_Products_ContentTree.item(selectColumn, "values")
+                    columnAxis = treeCurrentdisplay("products", valuesInColumn[7])
+            elif (tableOndisplay.currentTable == "vendors"):
+                    selectColumn = display_Vendors_ContentTree.focus()
+                    valuesInColumn = display_Vendors_ContentTree.item(selectColumn, "values")
+                    columnAxis = treeCurrentdisplay("vendors", valuesInColumn[6])
+            elif (tableOndisplay.currentTable == "orders"):
+                    selectColumn = display_Orders_ContentTree.focus()
+                    valuesInColumn = display_Orders_ContentTree.item(selectColumn, "values")
+                    columnAxis = treeCurrentdisplay("orders", valuesInColumn[2])
+            elif (tableOndisplay.currentTable == "vendorPrices"):
+                    selectColumn = display_VendorPrices_ContentTree.focus()
+                    valuesInColumn = display_VendorPrices_ContentTree.item(selectColumn, "values")
+                    columnAxis = treeCurrentdisplay("vendorPrices", valuesInColumn[5])
+            print(selectColumn)
+            confirm_message = Label(deleteConfirmWindow, text="Are you sure you want to delete selected column?", padx=10, pady=10)
+            confirm_message.grid(row=0, column=0, pady=10)
+            yesNoBox = Frame(deleteConfirmWindow)
+            yesNoBox.grid(row=1, column=0, padx=20, pady=(10, 0))
+            edit_yes_button = Button(yesNoBox, text="Yes", command=submitDeleteCommand)
+            edit_yes_button.grid(row=0, column=0, columnspan=2, pady=5, padx=1, ipadx=50)
+            edit_no_button = Button(yesNoBox, text="No", command=deleteConfirmWindow.destroy)
+            edit_no_button.grid(row=0, column=2, columnspan=2, pady=5, padx=1, ipadx=50)
+        except:
+            deleteConfirmWindow.destroy()
+            messagebox.showerror("Failed","This cannot be deleted!")
 
     def displayProductsWindowSetUp():
         global tableOndisplay
@@ -1194,6 +1370,7 @@ def MainScreen(tab,root):
         root.geometry("1500x600")
 
     def displayMainPageQueryWindowSetUp():
+
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("Product on Market", "")
         global mainPageQuery_ContentTree
@@ -1240,7 +1417,7 @@ def MainScreen(tab,root):
     main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm, bg = 'light gray', fg = 'black')
     main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
     main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'light gray', fg = 'black')
-    main_backToMainPage_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+    main_backToMainPage_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
 
 
     def queryStock():
@@ -1267,35 +1444,38 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         # Query DB
-        c.execute('''
-                    SELECT o.orderID, o.orderDate, o.orderStatus,
-                            (SELECT SUM(oL.itemQuantity)
-                                FROM orderLines oL
-                            WHERE o.orderId =oL.orderId )AS "Total Quantity",
-                           ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
-                        FROM orders o
-                            INNER JOIN orderLines oL on o.orderId = oL.orderId
-                            INNER JOIN products p on p.SKU = oL.SKU
-                            INNER JOIN vendorPrices vP on p.SKU = vP.SKU
-                    WHERE orderStatus != 'Delivered'
-                    GROUP BY o.orderID, o.orderDate
-                    ORDER BY o.orderDate;''')
-        records = c.fetchall()
+        try:
+                c.execute('''
+                                                SELECT o.orderID, o.orderDate, o.orderStatus,
+                                (SELECT SUM(oL.itemQuantity)
+                                    FROM orderLines oL
+                                WHERE o.orderId =oL.orderId )AS "Total Quantity",
+                               ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+                            FROM orders o
+                                INNER JOIN orderLines oL on o.orderId = oL.orderId
+                                INNER JOIN products p on p.SKU = oL.SKU
+                                INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+                        WHERE orderStatus != 'Delivered'
+                        GROUP BY o.orderID, o.orderDate
+                        ORDER BY o.orderDate;''')
+                records = c.fetchall()
+                for row in display_Orders_ContentTree.get_children():
+                    display_Orders_ContentTree.delete(row)
 
-        for row in display_Orders_ContentTree.get_children():
-            display_Orders_ContentTree.delete(row)
+                for row in records:
+                    print(row)
+                    display_Orders_ContentTree.insert("", tk.END, values=row)
+        except:
+            messagebox.showwarning('Whoops','There are no active orders')
 
-        for row in records:
-            print(row)
-            display_Orders_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
 
     check_stock_button = Button(mainOptionFrame, text="Inventory", command=queryStock, bg = 'light gray', fg = 'black')
-    check_stock_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+    check_stock_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=100)
 
     check_active_orders_button = Button(mainOptionFrame, text="Active Orders", command=queryActiveOrders, bg = 'light gray', fg = 'black')
-    check_active_orders_button.grid(row=12, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+    check_active_orders_button.grid(row=12, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
 
     add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart,
                                         bg='light gray', fg='black')
@@ -1307,9 +1487,11 @@ def MainScreen(tab,root):
 
     add_cart_button = Button(mainOptionFrame, text="Show Cart", command=DisplayCartWindowPopUp,
                                         bg='light gray', fg='black')
-    add_cart_button.grid(row=14, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+    add_cart_button.grid(row=14, column=0, columnspan=1, pady=10, padx=1, ipadx=52)
 
-
+    add_cart_button = Button(mainOptionFrame, text="Place Order", command=PlaceOrder,
+                             bg='light gray', fg='black')
+    add_cart_button.grid(row=14, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
 
     # Initial display
     displayMainPageQueryWindowSetUp()
@@ -1317,7 +1499,7 @@ def MainScreen(tab,root):
 
 
     # things to be implemented
-    #(DONE) 0. ADDING NEW ORDERS NOW HAVE DEFAULT DATE
+    #(DONE). ADDING NEW ORDERS NOW HAVE DEFAULT DATE
     #(DONE) 1.DROPDOWN for status when adding new orders, to choose from "processing", "shipped", "delivered", "other"
     #(DONE) ADD INVENTORY & ACTIVE ORDERS BUTTON
     #(DONE) 2.Scroll Bar for all tables
@@ -1330,11 +1512,11 @@ def MainScreen(tab,root):
     # 7. display orderlines by select a specific order low (either double clicking or an extra option)
     # 8. low stock alert
     # 9. sort product by popularity by order history
-    # 10. display active orders
-    #(DONE) 11.add to cart
+    # (DONE) 10. display active orders
+    # (DONE) 11.add to cart
 
     #thins to enhance
-    # 1. switching tables have some displaying problems
+    # (DONE) 1. switching tables have some displaying problems
     # 2. make the colors of the odd and even columns different
     # 3. (advanced) right-click to select to edit
 
