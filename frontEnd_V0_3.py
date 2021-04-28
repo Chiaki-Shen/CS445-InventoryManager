@@ -4,13 +4,16 @@ from tkinter import *
 from tkinter import ttk
 import tkinter as tk
 import sqlite3
+from datetime import date
+from tkinter import messagebox
+
 
 
 def MainScreen(tab,root):
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
     x = (ws / 2) - (1400 / 2)
-    y = (hs / 2) - (700 / 2)
+    y = (hs / 2) - (1000 / 2)
     conn = sqlite3.connect('Hiccups.db')  # create a DB if there is not one
     c = conn.cursor()
 
@@ -40,7 +43,6 @@ def MainScreen(tab,root):
     mainSortComboDropdown.bind("<<ComboboxSelected>>")
     # print(mainComboDropdown.get())
     mainSortComboDropdown.grid(row=7, column=1, pady=1, padx=1)
-
 
 
     class treeCurrentdisplay:
@@ -127,6 +129,7 @@ def MainScreen(tab,root):
             print("In Edit table orders")
             ordersEditWindowPopup()
 
+
     # This def called after user confirm the changes
     def submitEditCommand():
         if (tableOndisplay.currentTable == "products"):
@@ -135,6 +138,112 @@ def MainScreen(tab,root):
             submitEditVendor()
         elif (tableOndisplay.currentTable == "orders"):
             submitEditOrders()
+
+
+    def submitAddCart():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+
+        selectColumn = display_Products_ContentTree.focus()
+        valuesInColumn = display_Products_ContentTree.item(selectColumn, "values")
+
+        mycart = []
+        mycart.append(valuesInColumn[0])
+        mycart.append(valuesInColumn[1])
+        mycart.append(valuesInColumn[2])
+        mycart.append(valuesInColumn[5])
+        mycart.append(valuesInColumn[6])
+
+
+
+        c.execute("INSERT INTO cart VALUES (:SKU, :prodDesc, :productURL, :reorderLevel, :unitsInStock)",
+                  {
+                      'SKU': mycart[0],
+                      'prodDesc': mycart[1],
+                      'productURL': mycart[2],
+                      'reorderLevel': mycart[3],
+                      'unitsInStock': mycart[4],
+                  })
+
+        conn.commit()
+        conn.close()
+
+
+    def addCart():
+        if (tableOndisplay.currentTable == "products"):
+            selectColumn = display_Products_ContentTree.focus()
+            if (selectColumn == ""):
+                return 0
+            print("Adding products")
+            submitAddCart()
+
+
+    def showCart():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        # Query DB
+        c.execute("SELECT * FROM cart")
+        records = c.fetchall()
+
+        for row in tree.get_children():
+            tree.delete(row)
+
+        for row in records:
+            print(row)
+            tree.insert("", tk.END, values=row)
+        conn.commit()
+        conn.close()
+
+    def DisplayCartWindowPopUp():
+        global cart
+        cart = Toplevel()
+        message = "Cart"
+        Label(cart, text=message).pack()
+        new_element_header = ["SKU", "Prod Description", "Product URL", "Reorder Level", "Units In Stock"]
+        treeScroll = ttk.Scrollbar(cart)
+        treeScroll.pack(side=RIGHT, fill=Y)
+        global tree
+        cart.geometry('%dx%d+%d+%d' % (800, 600, x*1.5, y*1.5))
+        tree = ttk.Treeview(cart, columns=new_element_header, show="headings", yscrollcommand=treeScroll)
+        tree.column("SKU", width=120, minwidth=100, anchor=tk.CENTER)
+        tree.heading("SKU", text="SKU")
+
+        tree.column("Prod Description", width=250, minwidth=100, anchor=tk.CENTER)
+        tree.heading("Prod Description", text="Prod Description")
+
+        tree.column("Product URL", width=200, minwidth=100, anchor=tk.CENTER)
+        tree.heading("Product URL", text="Product URL")
+
+        tree.column("Reorder Level", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.heading("Reorder Level", text="Level")
+
+        tree.column("Units In Stock", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.heading("Units In Stock", text="Stock")
+        tree.pack(side=LEFT, fill=BOTH)
+        treeScroll.config(command=tree.yview)
+        showCart()
+
+
+
+
+    def newCart():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        c.execute("DROP TABLE IF EXISTS cart;")
+        c.execute('''CREATE TABLE cart(
+                          SKU VARCHAR (25) NOT NULL,
+                          prodDesc VARCHAR NOT NULL,
+                          productURL VARCHAR,
+                          reorderLevel double DEFAULT 'N/A',
+                          unitsInStock double DEFAULT 0,
+                          CONSTRAINT products_pk PRIMARY KEY (SKU)
+                    );''')
+        messagebox.showinfo("Success", "Your cart has been cleared")
+
+        conn.commit()
+        conn.close()
+
+
 
     def displayCommand():
         SummaryTreeRemove()
@@ -179,6 +288,7 @@ def MainScreen(tab,root):
             print("Tree not defined")
         displayMainPageQueryWindowSetUp()
         mainPageQuery()
+
 
     def sortCommand(): ####################### Comand list for sort in certain type ################################
         currentSelectedSort = mainSortComboDropdown.get()
@@ -692,6 +802,7 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
 
+
     def orderLinesWindowsPopup():
         global orderlinesAdd
         orderlinesAdd = Tk()
@@ -711,6 +822,8 @@ def MainScreen(tab,root):
         orderlinesbox3_label = Label(orderlinesAdd, text="Item Quantity")
         orderlinesbox3_label.grid(row=3, column=0, padx=20)
 
+
+
         option_Add_btn = Button(orderlinesAdd, text="Add items to Orders", command=submitOrderlines)
         option_Add_btn.grid(row=6, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
@@ -727,17 +840,17 @@ def MainScreen(tab,root):
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
-
         global orderbox1
         orderbox1 = Entry(ordersAdd, width=30)
         #orderbox1.grid(row=2, column=1, padx=20, pady=(10, 0))
         global orderbox2
-        orderbox2 = Entry(ordersAdd, width=30)
+        orderbox2 = Entry(ordersAdd, width=23)
         orderbox2.grid(row=3, column=1, padx=20, pady=(10, 0))
         global orderbox3
-        orderbox3 = Entry(ordersAdd, width=30)
+        orderbox3 = ttk.Combobox(ordersAdd, values = ["Processing", "Shipped", "Delivered", "Other"])
         orderbox3.grid(row=4, column=1, padx=20, pady=(10, 0))
 
+        orderbox2.insert(0, date.today())
 
 
         # Create labels for display
@@ -751,10 +864,8 @@ def MainScreen(tab,root):
         option_Add_btn = Button(ordersAdd, text="Confirm New Order", command=submitAddOrder)
         option_Add_btn.grid(row=7, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
 
+
         conn.commit()
-
-
-
 
     def vendorPricesAddWindowPopup():
         global vendorPriceAdd
@@ -963,7 +1074,6 @@ def MainScreen(tab,root):
         edit_no_button.grid(row=0, column=2, columnspan=2, pady=5, padx=1, ipadx=50)
 
 
-
     def deleteConfirm():  # need to MODIFY values in column when table content changes!!!!
         global deleteConfirmWindow
         deleteConfirmWindow = tk.Tk()
@@ -1001,109 +1111,112 @@ def MainScreen(tab,root):
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("products", "")
         global display_Products_ContentTree
-        display_Products_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7"), show='headings')
-        display_Products_ContentTree.column("#1", width=150, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7"), show='headings', height=15)
+        display_Products_ContentTree.column("#1", width=120, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#1", text="SKU")
-        display_Products_ContentTree.column("#2", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.column("#2", width=400, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#2", text="Prod Description")
-        display_Products_ContentTree.column("#3", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.column("#3", width=130, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#3", text="Product URL")
-        display_Products_ContentTree.column("#4", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.column("#4", width=100, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#4", text="Quantity")
-        display_Products_ContentTree.column("#5", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.column("#5", width=100, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#5", text="Availability")
-        display_Products_ContentTree.column("#6", width=120, minwidth=100, anchor=tk.CENTER)
+        display_Products_ContentTree.column("#6", width=100, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#6", text="Reorder Level")
-        display_Products_ContentTree.column("#7", width=120, minwidth=100, anchor=tk.CENTER)
-        display_Products_ContentTree.heading("#7", text="Units In Stock")
+        display_Products_ContentTree.column("#7", width=50, minwidth=50, anchor=tk.CENTER)
+        display_Products_ContentTree.heading("#7", text="Stock")
 
         display_Products_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1300x460")
+        root.geometry("1500x600")
 
     def displayVendorsWindowSetUp():
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendors", "")
         global display_Vendors_ContentTree
-        display_Vendors_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"), show='headings')
-        display_Vendors_ContentTree.column("#1", width=120, minwidth=70, anchor=tk.W)
+        display_Vendors_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"), show='headings', height=15)
+        display_Vendors_ContentTree.column("#1", width=100, minwidth=70, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#1", text="Vendor Name")
-        display_Vendors_ContentTree.column("#2", width=130, minwidth=90, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#2", width=100, minwidth=90, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#2", text="Phone Number")
-        display_Vendors_ContentTree.column("#3", width=170, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#3", width=150, minwidth=100, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#3", text="Email")
-        display_Vendors_ContentTree.column("#4", width=160, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#4", width=200, minwidth=100, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#4", text="Address")
-        display_Vendors_ContentTree.column("#5", width=80, minwidth=100, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#5", width=100, minwidth=100, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#5", text="Zip Code")
         display_Vendors_ContentTree.column("#6", width=100, minwidth=90, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#6", text="City")
-        display_Vendors_ContentTree.column("#7", width=70, minwidth=60, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#7", width=50, minwidth=60, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#7", text="State")
-        display_Vendors_ContentTree.column("#8", width=100, minwidth=90, anchor=tk.CENTER)
+        display_Vendors_ContentTree.column("#8", width=200, minwidth=90, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#8", text="Web URL")
 
         display_Vendors_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1480x460")
+        root.geometry("1500x600")
 
     def displayOrdersWindowSetUp():
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("orders", "")
         global display_Orders_ContentTree
-        display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings')
-        display_Orders_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
+        display_Orders_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings', height=15)
+        display_Orders_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#1", text="Order ID")
-        display_Orders_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
+        display_Orders_ContentTree.column("#2", width=200, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#2", text="Order Date")
-        display_Orders_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
+        display_Orders_ContentTree.column("#3", width=150, minwidth=100, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#3", text="Order Status")
-        display_Orders_ContentTree.column("#4", width=180, minwidth=80, anchor=tk.CENTER)
+        display_Orders_ContentTree.column("#4", width=200, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#4", text="Total Quantity")
-        display_Orders_ContentTree.column("#5", width=180, minwidth=80, anchor=tk.CENTER)
+        display_Orders_ContentTree.column("#5", width=200, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#5", text="Order Total")
 
 
         display_Orders_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1400x460")
+        root.geometry("1500x600")
 
     def displayVendorPricesWindowSetUp():
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendorPrices", "")
         global display_VendorPrices_ContentTree
-        display_VendorPrices_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings')
-        display_VendorPrices_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.W)
+        display_VendorPrices_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings', height=15)
+        display_VendorPrices_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#1", text="Vendor")
-        display_VendorPrices_ContentTree.column("#2", width=180, minwidth=80, anchor=tk.CENTER)
-        display_VendorPrices_ContentTree.heading("#2", text="SKU")
-        display_VendorPrices_ContentTree.column("#3", width=140, minwidth=100, anchor=tk.CENTER)
+        display_VendorPrices_ContentTree.column("#2", width=300, minwidth=80, anchor=tk.CENTER)
+        display_VendorPrices_ContentTree.heading("#2", text="Product")
+        display_VendorPrices_ContentTree.column("#3", width=150, minwidth=100, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#3", text="Unit List Price")
-        display_VendorPrices_ContentTree.column("#4", width=140, minwidth=100, anchor=tk.CENTER)
+        display_VendorPrices_ContentTree.column("#4", width=300, minwidth=100, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#4", text="Time Checked")
 
 
         display_VendorPrices_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1300x460")
+        root.geometry("1500x600")
 
     def displayMainPageQueryWindowSetUp():
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("Product on Market", "")
         global mainPageQuery_ContentTree
-        mainPageQuery_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings')
-        mainPageQuery_ContentTree.column("#1", width=100, minwidth=80, anchor=tk.W)
+        mainPageQuery_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings', height=15)
+        mainPageQuery_ContentTree.column("#1", width=150, minwidth=80, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#1", text="Vendor")
-        mainPageQuery_ContentTree.column("#2", width=120, minwidth=80, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.column("#2", width=150, minwidth=80, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#2", text="SKU")
-        mainPageQuery_ContentTree.column("#3", width=350, minwidth=100, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.column("#3", width=400, minwidth=100, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#3", text="product Description")
-        mainPageQuery_ContentTree.column("#4", width=140, minwidth=100, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.column("#4", width=150, minwidth=100, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#4", text="Unit List Price")
-        mainPageQuery_ContentTree.column("#5", width=140, minwidth=100, anchor=tk.CENTER)
+        mainPageQuery_ContentTree.column("#5", width=150, minwidth=100, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#5", text="Time Checked")
-
         mainPageQuery_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+
+
         global summaryFlag
         summaryFlag = summaryDCFlag("off")
         mainPageQuery_ContentTree.bind('<Double-1>', doubleClicked)
-        root.geometry("1300x460")
+        root.geometry("1500x600")
+
+
 
     # Main Screen Labels
     main_table_select_label = Label(mainOptionFrame, text="Choose Table")
@@ -1111,30 +1224,105 @@ def MainScreen(tab,root):
     main_sortBy_label = Label(mainOptionFrame, text="Sort by")
     main_sortBy_label.grid(row=7, column=0)
     # Insert data button in Main screen
-    main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand)
+    main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand, bg = 'light gray', fg = 'black')
     main_insert_button.grid(row=3, column=0, columnspan=2, pady=10, padx=1, ipadx=70)
     # Display table button in Main screen
-    main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand)
+    main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand, bg = 'light gray', fg = 'black')
     main_select_display.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=83)
     # Edit button in Main Screen
-    main_edit_button = Button(mainOptionFrame, text="Edit selected Column", command=editCommand)
+    main_edit_button = Button(mainOptionFrame, text="Edit selected Column", command=editCommand, bg = 'light gray', fg = 'black')
     main_edit_button.grid(row=5, column=0, columnspan=2, pady=10, padx=1, ipadx=62)
     # Sort button in Main Screen
-    main_sort_button = Button(mainOptionFrame, text="Sort", command=sortCommand)
+    main_sort_button = Button(mainOptionFrame, text="Sort", command=sortCommand, bg = 'light gray', fg = 'black')
     main_sort_button.grid(row=8, column=0, columnspan=2, pady=10, padx=1, ipadx=112) # row 6 is left for drop down
 
     # Delete button in Main Screen
-    main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm)
+    main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm, bg = 'light gray', fg = 'black')
     main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
-    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay)
+    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'light gray', fg = 'black')
     main_backToMainPage_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+
+
+    def queryStock():
+        treeRemove()
+        displayProductsWindowSetUp()
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        # Query DB
+        c.execute("SELECT * FROM products WHERE unitsInStock != 0 OR unitsInStock != 0.0 ORDER BY unitsInStock")
+        records = c.fetchall()
+
+        for row in display_Products_ContentTree.get_children():
+            display_Products_ContentTree.delete(row)
+
+        for row in records:
+            print(row)
+            display_Products_ContentTree.insert("", tk.END, values=row)
+        conn.commit()
+        conn.close()
+
+    def queryActiveOrders():
+        treeRemove()
+        displayOrdersWindowSetUp()
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        # Query DB
+        c.execute('''
+                    SELECT o.orderID, o.orderDate, o.orderStatus,
+                            (SELECT SUM(oL.itemQuantity)
+                                FROM orderLines oL
+                            WHERE o.orderId =oL.orderId )AS "Total Quantity",
+                           ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+                        FROM orders o
+                            INNER JOIN orderLines oL on o.orderId = oL.orderId
+                            INNER JOIN products p on p.SKU = oL.SKU
+                            INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+                    WHERE orderStatus != 'Delivered'
+                    GROUP BY o.orderID, o.orderDate
+                    ORDER BY o.orderDate;''')
+        records = c.fetchall()
+
+        for row in display_Orders_ContentTree.get_children():
+            display_Orders_ContentTree.delete(row)
+
+        for row in records:
+            print(row)
+            display_Orders_ContentTree.insert("", tk.END, values=row)
+        conn.commit()
+        conn.close()
+
+    check_stock_button = Button(mainOptionFrame, text="Inventory", command=queryStock, bg = 'light gray', fg = 'black')
+    check_stock_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+
+    check_active_orders_button = Button(mainOptionFrame, text="Active Orders", command=queryActiveOrders, bg = 'light gray', fg = 'black')
+    check_active_orders_button.grid(row=12, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+
+    add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart,
+                                        bg='light gray', fg='black')
+    add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
+
+    add_cart_button = Button(mainOptionFrame, text="Clear Cart", command=newCart,
+                                        bg='light gray', fg='black')
+    add_cart_button.grid(row=13, column=1, columnspan=1, pady=10, padx=1, ipadx=55)
+
+    add_cart_button = Button(mainOptionFrame, text="Show Cart", command=DisplayCartWindowPopUp,
+                                        bg='light gray', fg='black')
+    add_cart_button.grid(row=14, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+
+
+
     # Initial display
     displayMainPageQueryWindowSetUp()
     mainPageQuery()
 
+
     # things to be implemented
-    # 1.DROPDOWN for status when adding new orders, to choose from "processing", "shipped", "delivered", "other"
-    # 2.Scroll Bar for all tables
+    #(DONE) 0. ADDING NEW ORDERS NOW HAVE DEFAULT DATE
+    #(DONE) 1.DROPDOWN for status when adding new orders, to choose from "processing", "shipped", "delivered", "other"
+    #(DONE) ADD INVENTORY & ACTIVE ORDERS BUTTON
+    #(DONE) 2.Scroll Bar for all tables
+    #(DONE) HIGHLIGHT COLORS OF BUTTON
+    #(DONE) WIDEN the data for clear visual
     # 3.Connect to csv file by using python  (integrate web crawler to the python)
     # 4.csv file should be corresponding to the implementation for easier import process
     # 5.generate pdf report
@@ -1143,14 +1331,12 @@ def MainScreen(tab,root):
     # 8. low stock alert
     # 9. sort product by popularity by order history
     # 10. display active orders
-    # 11.add to cart
+    #(DONE) 11.add to cart
 
     #thins to enhance
     # 1. switching tables have some displaying problems
     # 2. make the colors of the odd and even columns different
     # 3. (advanced) right-click to select to edit
-
-
 
 
     conn.commit()
