@@ -4,9 +4,7 @@ from tkinter import ttk
 import tkinter as tk
 from frontEnd_V0_3 import MainScreen
 from report import plot
-from tkinter import *
-from shopify_scraper import *
-from PopupMenu import Popup
+
 
 
 root = tk.Tk()
