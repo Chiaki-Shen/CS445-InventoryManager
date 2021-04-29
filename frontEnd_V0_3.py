@@ -144,7 +144,7 @@ def MainScreen(tab,root):
         global quantityAdd
         quantityAdd = Tk()
         quantityAdd.title("Adding to Cart")
-        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*1.5, y*1.5))
+        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*2, y*6))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -165,7 +165,7 @@ def MainScreen(tab,root):
         global quantityAdd
         quantityAdd = Tk()
         quantityAdd.title("Adding to Cart")
-        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*1.5, y*1.5))
+        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*2, y*6))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -218,7 +218,22 @@ def MainScreen(tab,root):
                       })
             quantitybox1.delete(0,END)
         except:
-            messagebox.showwarning('Failed adding', 'You have already add this one to the cart.')
+                c.execute('''UPDATE cart
+                                    SET
+                                        Quantity = Quantity + :quan
+                                    WHERE SKU = :sku''',
+                          {
+                              'sku': mycart[0],
+                              'quan': mycart[5],
+                          })
+                c.execute('''UPDATE cart
+                                    SET
+                                        totalPrice = Quantity * unitPrice
+                                    WHERE SKU = :sku''',
+                          {
+                              'sku': mycart[0],
+                          })
+                quantitybox1.delete(0, END)
 
 
         conn.commit()
@@ -262,7 +277,22 @@ def MainScreen(tab,root):
                       })
             quantitybox1.delete(0,END)
         except:
-            messagebox.showwarning('Failed adding', 'You have already add this one to the cart.')
+            c.execute('''UPDATE cart
+                                SET
+                                    Quantity = Quantity + :quan
+                                WHERE SKU = :sku''',
+                      {
+                          'sku': mycart[0],
+                          'quan': mycart[5],
+                      })
+            c.execute('''UPDATE cart
+                                SET
+                                    totalPrice = Quantity * unitPrice
+                                WHERE SKU = :sku''',
+                      {
+                          'sku': mycart[0],
+                      })
+            quantitybox1.delete(0, END)
 
 
         conn.commit()
@@ -340,6 +370,7 @@ def MainScreen(tab,root):
         tree.pack(side=LEFT, fill=BOTH)
         treeScroll.config(command=tree.yview)
         showCart()
+
 
 
 
