@@ -3,7 +3,6 @@ import sqlite3
 from tkinter import ttk
 import tkinter as tk
 from frontEnd_V0_3 import MainScreen
-from report import plot
 
 
 
