@@ -6,8 +6,8 @@ import tkinter as tk
 import sqlite3
 from datetime import date
 from tkinter import messagebox
-
-
+import webbrowser
+'''from shopify_scraper import get_bestware_products'''
 
 def MainScreen(tab,root):
     ws = root.winfo_screenwidth()
@@ -303,6 +303,8 @@ def MainScreen(tab,root):
 
         conn.commit()
         conn.close()
+        tree.bind('<Double-1>', doubleClicked)
+
 
     def DisplayCartWindowPopUp():
         global cart
@@ -321,7 +323,7 @@ def MainScreen(tab,root):
         tree.column("Prod Description", width=250, minwidth=100, anchor=tk.CENTER)
         tree.heading("Prod Description", text="Prod Description")
 
-        tree.column("Product URL", width=200, minwidth=100, anchor=tk.CENTER)
+        tree.column("Product URL", width=250, minwidth=100, anchor=tk.CENTER)
         tree.heading("Product URL", text="Product URL")
 
         tree.column("Quantity", width=100, minwidth=100, anchor=tk.CENTER)
@@ -330,15 +332,14 @@ def MainScreen(tab,root):
         tree.column("Total", width=100, minwidth=100, anchor=tk.CENTER)
         tree.heading("Total", text="Total")
 
-        tree.column("unitPrice", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.column("unitPrice", width=75, minwidth=75, anchor=tk.CENTER)
         tree.heading("unitPrice", text="unitPrice")
 
-        tree.column("Units In Stock", width=100, minwidth=100, anchor=tk.CENTER)
+        tree.column("Units In Stock", width=75, minwidth=75, anchor=tk.CENTER)
         tree.heading("Units In Stock", text="Stock")
         tree.pack(side=LEFT, fill=BOTH)
         treeScroll.config(command=tree.yview)
         showCart()
-
 
 
 
@@ -358,7 +359,7 @@ def MainScreen(tab,root):
                           totalPrice double,
                           CONSTRAINT products_pk PRIMARY KEY (SKU)
                     );''')
-        messagebox.showinfo("Success", "Your cart has been cleared")
+        messagebox.showinfo("Success", "Your cart is now empty!")
 
         conn.commit()
         conn.close()
@@ -371,6 +372,9 @@ def MainScreen(tab,root):
         c.execute("SELECT COUNT(SKU) FROM cart;")
         count = c.fetchone()
         num = count[0]
+        if num == 0:
+            messagebox.showerror('Failed', "You don't have anything in cart")
+            return NONE
 
         c.execute("SELECT SKU FROM cart")
         SKUs = c.fetchall()
@@ -413,6 +417,7 @@ def MainScreen(tab,root):
                                 })
         conn.commit()
         conn.close()
+        messagebox.showinfo("Success", "Your order has been placed. (Now go shop!)")
         newCart()
 
     def displayCommand():
@@ -513,16 +518,16 @@ def MainScreen(tab,root):
         c = conn.cursor()
         # Query DB
         c.execute('''SELECT o.orderID, o.orderDate, o.orderStatus,
-                            (SELECT SUM(oL.itemQuantity)
-                                FROM orderLines oL
-                            WHERE o.orderId =oL.orderId )AS "Total Quantity",
-                           ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
-                        FROM orders o
-                            INNER JOIN orderLines oL on o.orderId = oL.orderId
-                            INNER JOIN products p on p.SKU = oL.SKU
-                            INNER JOIN vendorPrices vP on p.SKU = vP.SKU
-                    GROUP BY o.orderID, o.orderDate
-                    ORDER BY o.orderDate;''')
+                                (SELECT SUM(oL.itemQuantity)
+                                    FROM orderLines oL
+                                WHERE o.orderId =oL.orderId )AS "Total Quantity",
+                               (SELECT total FROM (SELECT DISTINCT (p.sku), unitListPrice * oL.itemQuantity AS total)) AS total
+                            FROM orders o
+                                INNER JOIN orderLines oL on o.orderId = oL.orderId
+                                INNER JOIN products p on p.SKU = oL.SKU
+                                INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+                        GROUP BY o.orderID, o.orderDate
+                        ORDER BY o.orderDate;''')
         records = c.fetchall()
 
         for row in display_Orders_ContentTree.get_children():
@@ -533,6 +538,8 @@ def MainScreen(tab,root):
             display_Orders_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
+        display_Orders_ContentTree.bind('<Double-1>', doubleClickedOrdersDetails)
+
 
     def mainPageQuery(opt = 'REGULAR'):
         conn = sqlite3.connect('Hiccups.db')
@@ -604,16 +611,120 @@ def MainScreen(tab,root):
 
     # DoubleClicked function
     def doubleClicked(event):
-        if (tableOndisplay.currentTable == "Product on Market"):
-            region = mainPageQuery_ContentTree.identify_column(event.x)
-            print("Sort Flag is " + summaryFlag.flag)
-            if region == "#4":
-                if summaryFlag.flag == "off":
-                    mainPageQuery("L2H")
-                    summaryFlag.flag = "on"
-                elif summaryFlag.flag == "on":
-                    mainPageQuery("H2L")
-                    summaryFlag.flag = "off"
+            region = tree.identify_column(event.x)
+            conn = sqlite3.connect('Hiccups.db')
+            c = conn.cursor()
+            selectColumn = tree.focus()
+            valuesInColumn = tree.item(selectColumn, "values")
+            mycart = []
+            mycart.append(valuesInColumn[0])
+            c.execute("SELECT productURL FROM cart WHERE SKU = ?", (mycart[0],))
+            url = c.fetchall()
+            listoutput = [i[0] for i in url]
+            webbrowser.open(listoutput[0])
+
+    def doubleClickedOrdersDetails(event):
+
+            region = display_Orders_ContentTree.identify_column(event.x)
+            conn = sqlite3.connect('Hiccups.db')
+            c = conn.cursor()
+            selectColumn = display_Orders_ContentTree.focus()
+            valuesInColumn = display_Orders_ContentTree.item(selectColumn, "values")
+
+            global mycart
+            mycart = []
+            mycart.append(valuesInColumn[0]) #orderID
+            mycart.append(valuesInColumn[1]) #date
+            mycart.append(valuesInColumn[2]) #Quantity
+
+
+            orderDetails = Toplevel()
+            message = ("Order Details (" + mycart[0] + ")")
+            global new_element_header
+            new_element_header = [ "Prod Description", "Quantity", "unitPrice"]
+            Label(orderDetails, text=message).pack()
+            treeScroll = ttk.Scrollbar(orderDetails)
+            treeScroll.pack(side=RIGHT, fill=Y)
+            global orderDetail
+            orderDetails.geometry('%dx%d+%d+%d' % (800, 600, x * 1.5, y * 1.5))
+            orderDetail = ttk.Treeview(orderDetails, columns=new_element_header, show="headings", yscrollcommand=treeScroll)
+
+            orderDetail.column("Prod Description", width=500, minwidth=100, anchor=tk.CENTER)
+            orderDetail.heading("Prod Description", text="Prod Description")
+
+            orderDetail.column("Quantity", width=150, minwidth=100, anchor=tk.CENTER)
+            orderDetail.heading("Quantity", text="Quantity")
+
+
+            orderDetail.column("unitPrice", width=150, minwidth=100, anchor=tk.CENTER)
+            orderDetail.heading("unitPrice", text="unitPrice")
+
+            orderDetail.pack(side=LEFT, fill=BOTH)
+            treeScroll.config(command=orderDetail.yview)
+            showOrderDetails()
+
+            conn.commit()
+            conn.close()
+
+    def showOrderDetails(): #ITS NOT INSERTING BY COLUMNS, NEED CODE
+
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+
+        c.execute('''SELECT COUNT(p.sku) FROM products p
+                        INNER JOIN orderLines oL on p.SKU = oL.SKU
+                        INNER JOIN orders o on o.orderId = oL.orderId
+                WHERE o.orderID = ?''',(mycart[0],))
+        count = c.fetchone()
+        num = count[0]
+
+
+        c.execute('''SELECT p.prodDesc
+                        FROM products p
+                            INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+                            INNER JOIN orderLines oL on p.SKU = oL.SKU
+                            INNER JOIN orders o on o.orderId = oL.orderId
+                    WHERE o.orderID = ?
+                    GROUP BY p.prodDesc''',(mycart[0],))
+        prodDescs = c.fetchall()
+
+        for i in range(0, int(num)):
+            orderDetail.insert("", tk.END, values=prodDescs[i])
+
+
+        c.execute('''SELECT oL.itemQuantity
+                            FROM products p
+                                INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+                                INNER JOIN orderLines oL on p.SKU = oL.SKU
+                                INNER JOIN orders o on o.orderId = oL.orderId
+                        WHERE o.orderID = ?
+                        GROUP BY p.prodDesc''',(mycart[0],))
+
+        quantity = c.fetchall()
+
+        for i in range(0, int(num)):
+            orderDetail.insert("", tk.END, values=quantity[i])
+
+
+        c.execute('''SELECT vP.unitListPrice
+                            FROM products p
+                                INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+                                INNER JOIN orderLines oL on p.SKU = oL.SKU
+                                INNER JOIN orders o on o.orderId = oL.orderId
+                        WHERE o.orderID = ?
+                        GROUP BY p.prodDesc''',(mycart[0],))
+
+        prices = c.fetchall()
+
+
+        for i in range(0, int(num)):
+            orderDetail.insert("",'end', values = prices[i])
+
+        conn.commit()
+        conn.close()
+
+
+
 
     # Add item to product button function
     def submitAddProduct():
@@ -733,6 +844,7 @@ def MainScreen(tab,root):
                       'SKU': orderlinesbox2.get(),
                       'itemQuantity': orderlinesbox3.get(),
                   })
+
 
         c.execute('''UPDATE products
                   SET
@@ -1197,7 +1309,7 @@ def MainScreen(tab,root):
         global ordersEdit
         ordersEdit = Tk()
         ordersEdit.title("Edit highlighted order")
-        ordersEdit.geometry('%dx%d+%d+%d' % (400, 280, x * 1.5, y * 1.5))
+        ordersEdit.geometry('%dx%d+%d+%d' % (350, 120, x * 1.5, y * 1.5))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
         selectColumn = display_Orders_ContentTree.focus()
@@ -1210,8 +1322,9 @@ def MainScreen(tab,root):
         ordersEditbox2 = Entry(ordersEdit, width=30)  # product Desc
         ordersEditbox2.grid(row=3, column=1, padx=20, pady=(10, 0))
         global ordersEditbox3
-        ordersEditbox3 = Entry(ordersEdit, width=30)
-        ordersEditbox3.grid(row=4, column=1, padx=20, pady=(10, 0))
+        ordersEditbox3 = ttk.Combobox(ordersEdit, values = ["Processing", "Shipped", "Delivered", "Other"])
+        ordersEditbox3.grid(row=4, column=1, padx=20, pady=(10, 0), ipadx =20)
+
 
 
         # Create labels for display
@@ -1351,6 +1464,7 @@ def MainScreen(tab,root):
         display_Orders_ContentTree.grid(row=0, column=0, padx=50, pady=20)
         root.geometry("1500x600")
 
+
     def displayVendorPricesWindowSetUp():
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendorPrices", "")
@@ -1387,10 +1501,6 @@ def MainScreen(tab,root):
         mainPageQuery_ContentTree.heading("#5", text="Time Checked")
         mainPageQuery_ContentTree.grid(row=0, column=0, padx=50, pady=20)
 
-
-        global summaryFlag
-        summaryFlag = summaryDCFlag("off")
-        mainPageQuery_ContentTree.bind('<Double-1>', doubleClicked)
         root.geometry("1500x600")
 
 
@@ -1445,12 +1555,11 @@ def MainScreen(tab,root):
         c = conn.cursor()
         # Query DB
         try:
-                c.execute('''
-                                                SELECT o.orderID, o.orderDate, o.orderStatus,
+                c.execute('''SELECT o.orderID, o.orderDate, o.orderStatus,
                                 (SELECT SUM(oL.itemQuantity)
                                     FROM orderLines oL
                                 WHERE o.orderId =oL.orderId )AS "Total Quantity",
-                               ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+                               (SELECT total FROM (SELECT DISTINCT (p.sku), unitListPrice * oL.itemQuantity AS total)) AS total
                             FROM orders o
                                 INNER JOIN orderLines oL on o.orderId = oL.orderId
                                 INNER JOIN products p on p.SKU = oL.SKU
@@ -1493,18 +1602,23 @@ def MainScreen(tab,root):
                              bg='light gray', fg='black')
     add_cart_button.grid(row=14, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
 
+    '''button = Button(mainOptionFrame, text="Place Order", command=get_bestware_products(),
+                             bg='light gray', fg='black')
+    button.grid(row=15, column=0, columnspan=1, pady=10, padx=1, ipadx=52)'''
+
     # Initial display
     displayMainPageQueryWindowSetUp()
     mainPageQuery()
 
 
     # things to be implemented
-    #(DONE). ADDING NEW ORDERS NOW HAVE DEFAULT DATE
+    #0. ADDING NEW ORDERS NOW HAVE DEFAULT DATE
     #(DONE) 1.DROPDOWN for status when adding new orders, to choose from "processing", "shipped", "delivered", "other"
     #(DONE) ADD INVENTORY & ACTIVE ORDERS BUTTON
     #(DONE) 2.Scroll Bar for all tables
     #(DONE) HIGHLIGHT COLORS OF BUTTON
     #(DONE) WIDEN the data for clear visual
+    #(DONE) DOUBLE-CLICK NOWS CAN OPEN WEBSITE FROM CART MENU
     # 3.Connect to csv file by using python  (integrate web crawler to the python)
     # 4.csv file should be corresponding to the implementation for easier import process
     # 5.generate pdf report
@@ -1512,14 +1626,16 @@ def MainScreen(tab,root):
     # 7. display orderlines by select a specific order low (either double clicking or an extra option)
     # 8. low stock alert
     # 9. sort product by popularity by order history
-    # (DONE) 10. display active orders
-    # (DONE) 11.add to cart
+    #(DONE)10. display active orders
+    #(DONE) 11.add to cart
 
     #thins to enhance
-    # (DONE) 1. switching tables have some displaying problems
+    #(SOLVED) 1. switching tables have some displaying problems
     # 2. make the colors of the odd and even columns different
     # 3. (advanced) right-click to select to edit
 
+
+    # ORDERDETAIL NEEDS IMPLEMENTATION
 
     conn.commit()
 
