@@ -144,7 +144,7 @@ def MainScreen(tab,root):
         global quantityAdd
         quantityAdd = Tk()
         quantityAdd.title("Adding to Cart")
-        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*2, y*6))
+        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*2, y*10))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -165,7 +165,7 @@ def MainScreen(tab,root):
         global quantityAdd
         quantityAdd = Tk()
         quantityAdd.title("Adding to Cart")
-        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*2, y*6))
+        quantityAdd.geometry('%dx%d+%d+%d' % (250, 150, x*2, y*10))
         conn = sqlite3.connect('Hiccups.db')
         c = conn.cursor()
 
@@ -719,8 +719,6 @@ def MainScreen(tab,root):
                     GROUP BY p.prodDesc''',(mycart[0],))
         prodDescs = c.fetchall()
 
-        for i in range(0, int(num)):
-            orderDetail.insert("", tk.END, values=prodDescs[i])
 
 
         c.execute('''SELECT oL.itemQuantity
@@ -733,8 +731,6 @@ def MainScreen(tab,root):
 
         quantity = c.fetchall()
 
-        for i in range(0, int(num)):
-            orderDetail.insert("", tk.END, values=quantity[i])
 
 
         c.execute('''SELECT vP.unitListPrice
@@ -747,14 +743,12 @@ def MainScreen(tab,root):
 
         prices = c.fetchall()
 
+        for i in range(int(num)):
+            orderDetail.insert("", tk.END, values=(prodDescs[i],quantity[i],prices[i]))
 
-        for i in range(0, int(num)):
-            orderDetail.insert("",'end', values = prices[i])
 
         conn.commit()
         conn.close()
-
-
 
 
     # Add item to product button function
@@ -1557,8 +1551,8 @@ def MainScreen(tab,root):
     # Delete button in Main Screen
     main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm, bg = 'light gray', fg = 'black')
     main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
-    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'light gray', fg = 'black')
-    main_backToMainPage_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
+    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'green', fg = 'azure', font = ("Comic Sans MS", 10, "bold"))
+    main_backToMainPage_button.grid(row=14, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
 
 
     def queryStock():
@@ -1605,33 +1599,35 @@ def MainScreen(tab,root):
                 for row in records:
                     print(row)
                     display_Orders_ContentTree.insert("", tk.END, values=row)
+
         except:
             messagebox.showwarning('Whoops','There are no active orders')
 
         conn.commit()
         conn.close()
+        display_Orders_ContentTree.bind('<Double-1>', doubleClickedOrdersDetails)
 
     check_stock_button = Button(mainOptionFrame, text="Inventory", command=queryStock, bg = 'light gray', fg = 'black')
-    check_stock_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=100)
+    check_stock_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=100)
 
     check_active_orders_button = Button(mainOptionFrame, text="Active Orders", command=queryActiveOrders, bg = 'light gray', fg = 'black')
-    check_active_orders_button.grid(row=12, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
+    check_active_orders_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
 
     add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart,
                                         bg='light gray', fg='black')
-    add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
+    add_cart_button.grid(row=12, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
 
     add_cart_button = Button(mainOptionFrame, text="Clear Cart", command=newCart,
                                         bg='light gray', fg='black')
-    add_cart_button.grid(row=13, column=1, columnspan=1, pady=10, padx=1, ipadx=55)
+    add_cart_button.grid(row=12, column=1, columnspan=1, pady=10, padx=1, ipadx=55)
 
     add_cart_button = Button(mainOptionFrame, text="Show Cart", command=DisplayCartWindowPopUp,
                                         bg='light gray', fg='black')
-    add_cart_button.grid(row=14, column=0, columnspan=1, pady=10, padx=1, ipadx=52)
+    add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=52)
 
     add_cart_button = Button(mainOptionFrame, text="Place Order", command=PlaceOrder,
                              bg='light gray', fg='black')
-    add_cart_button.grid(row=14, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
+    add_cart_button.grid(row=13, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
 
     '''button = Button(mainOptionFrame, text="Place Order", command=get_bestware_products(),
                              bg='light gray', fg='black')
@@ -1654,9 +1650,9 @@ def MainScreen(tab,root):
     # 4.csv file should be corresponding to the implementation for easier import process
     # 5.generate pdf report
     # 6. (OPTIONAL) advanced query based on user filter (products and vendorprices and orders table only)
-    # 7. display orderlines by select a specific order low (either double clicking or an extra option)
+    #(DONE) 7. display orderlines by select a specific order low (either double clicking or an extra option)
     # 8. low stock alert
-    # 9. sort product by popularity by order history
+    #(DELETED) 9. sort product by popularity by order history
     #(DONE)10. display active orders
     #(DONE) 11.add to cart
 
