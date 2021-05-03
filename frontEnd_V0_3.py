@@ -1,5 +1,4 @@
 import uuid
-from functools import partial
 from tkinter import *
 from tkinter import ttk
 import tkinter as tk
@@ -7,7 +6,8 @@ import sqlite3
 from datetime import date
 from tkinter import messagebox
 import webbrowser
-'''from shopify_scraper import get_bestware_products'''
+
+
 
 def MainScreen(tab,root):
     ws = root.winfo_screenwidth()
@@ -405,7 +405,7 @@ def MainScreen(tab,root):
         num = count[0]
         if num == 0:
             messagebox.showerror('Failed', "You don't have anything in cart")
-            return NONE
+            return None
 
         c.execute("SELECT SKU FROM cart")
         SKUs = c.fetchall()
@@ -524,6 +524,7 @@ def MainScreen(tab,root):
             display_Products_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
+        lowStockAlert()
 
     def queryVendors():
         conn = sqlite3.connect('Hiccups.db')
@@ -616,6 +617,7 @@ def MainScreen(tab,root):
         for row in records:
             print(row)
             mainPageQuery_ContentTree.insert("", tk.END, values=row)
+
 
 
     def queryVendorPrices():
@@ -1330,6 +1332,37 @@ def MainScreen(tab,root):
         conn.commit()
         conn.close()
 
+    def lowStockAlert():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        c.execute('''SELECT *
+                    FROM products p
+                WHERE unitsInStock < reorderLevel
+                GROUP BY p.sku''')
+        records = c.fetchall()
+
+
+        if records:
+            res = messagebox.askquestion("Alert!", "You have something that is low on stock, Wanna see?")
+            if res == 'yes':
+                for row in display_Products_ContentTree.get_children():
+                    display_Products_ContentTree.delete(row)
+                for row in records:
+                    print(row)
+                    display_Products_ContentTree.insert("", tk.END, values=row)
+            elif res == 'no':
+                return None
+            else:
+                messagebox.showwarning('error', 'Something went wrong!')
+        else:
+            return None
+
+
+        conn.commit()
+        conn.close()
+
+
+
     def ordersEditWindowPopup(): # fill this edit
         global ordersEdit
         ordersEdit = Tk()
@@ -1530,31 +1563,6 @@ def MainScreen(tab,root):
 
 
 
-    # Main Screen Labels
-    main_table_select_label = Label(mainOptionFrame, text="Choose Table")
-    main_table_select_label.grid(row=1, column=0, pady=10, padx=1)
-    main_sortBy_label = Label(mainOptionFrame, text="Sort by")
-    main_sortBy_label.grid(row=7, column=0)
-    # Insert data button in Main screen
-    main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand, bg = 'light gray', fg = 'black')
-    main_insert_button.grid(row=3, column=0, columnspan=2, pady=10, padx=1, ipadx=70)
-    # Display table button in Main screen
-    main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand, bg = 'light gray', fg = 'black')
-    main_select_display.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=83)
-    # Edit button in Main Screen
-    main_edit_button = Button(mainOptionFrame, text="Edit selected Column", command=editCommand, bg = 'light gray', fg = 'black')
-    main_edit_button.grid(row=5, column=0, columnspan=2, pady=10, padx=1, ipadx=62)
-    # Sort button in Main Screen
-    main_sort_button = Button(mainOptionFrame, text="Sort", command=sortCommand, bg = 'light gray', fg = 'black')
-    main_sort_button.grid(row=8, column=0, columnspan=2, pady=10, padx=1, ipadx=112) # row 6 is left for drop down
-
-    # Delete button in Main Screen
-    main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm, bg = 'light gray', fg = 'black')
-    main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
-    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'green', fg = 'azure', font = ("Comic Sans MS", 10, "bold"))
-    main_backToMainPage_button.grid(row=14, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
-
-
     def queryStock():
         treeRemove()
         displayProductsWindowSetUp()
@@ -1572,6 +1580,7 @@ def MainScreen(tab,root):
             display_Products_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
+        lowStockAlert()
 
     def queryActiveOrders():
         treeRemove()
@@ -1607,62 +1616,64 @@ def MainScreen(tab,root):
         conn.close()
         display_Orders_ContentTree.bind('<Double-1>', doubleClickedOrdersDetails)
 
+
+    # Main Screen Labels
+    main_table_select_label = Label(mainOptionFrame, text="Choose Table")
+    main_table_select_label.grid(row=1, column=0, pady=10, padx=1)
+
+    # Display table button in Main screen
+    main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand, bg = 'light gray', fg = 'black')
+    main_select_display.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=83)
+
+    # Insert data button in Main screen
+    main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand, bg = 'light gray', fg = 'black')
+    main_insert_button.grid(row=3, column=0, columnspan=2, pady=10, padx=1, ipadx=70)
+
+    # Edit button in Main Screen
+    main_edit_button = Button(mainOptionFrame, text="Edit selected Column", command=editCommand, bg = 'light gray', fg = 'black')
+    main_edit_button.grid(row=5, column=0, columnspan=2, pady=10, padx=1, ipadx=62)
+
+    # Delete button in Main Screen
+    main_delete_button = Button(mainOptionFrame, text="Delete Selected Column", command=deleteConfirm, bg = 'light gray', fg = 'black')
+    main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
+
+    # Sort button in Main Screen
+    main_sortBy_label = Label(mainOptionFrame, text="Sort by")
+    main_sortBy_label.grid(row=7, column=0)
+
+    main_sort_button = Button(mainOptionFrame, text="Sort", command=sortCommand, bg = 'light gray', fg = 'black')
+    main_sort_button.grid(row=8, column=0, columnspan=2, pady=10, padx=1, ipadx=112) # row 6 is left for drop down
+
     check_stock_button = Button(mainOptionFrame, text="Inventory", command=queryStock, bg = 'light gray', fg = 'black')
     check_stock_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=100)
 
     check_active_orders_button = Button(mainOptionFrame, text="Active Orders", command=queryActiveOrders, bg = 'light gray', fg = 'black')
     check_active_orders_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
 
-    add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart,
-                                        bg='light gray', fg='black')
+    add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart, bg='light gray', fg='black')
     add_cart_button.grid(row=12, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
 
-    add_cart_button = Button(mainOptionFrame, text="Clear Cart", command=newCart,
-                                        bg='light gray', fg='black')
+    add_cart_button = Button(mainOptionFrame, text="Clear Cart", command=newCart, bg='light gray', fg='black')
     add_cart_button.grid(row=12, column=1, columnspan=1, pady=10, padx=1, ipadx=55)
 
-    add_cart_button = Button(mainOptionFrame, text="Show Cart", command=DisplayCartWindowPopUp,
-                                        bg='light gray', fg='black')
+    add_cart_button = Button(mainOptionFrame, text="Show Cart", command=DisplayCartWindowPopUp, bg='light gray', fg='black')
     add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=52)
 
-    add_cart_button = Button(mainOptionFrame, text="Place Order", command=PlaceOrder,
-                             bg='light gray', fg='black')
+    add_cart_button = Button(mainOptionFrame, text="Place Order", command=PlaceOrder, bg='light gray', fg='black')
     add_cart_button.grid(row=13, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
 
-    '''button = Button(mainOptionFrame, text="Place Order", command=get_bestware_products(),
-                             bg='light gray', fg='black')
-    button.grid(row=15, column=0, columnspan=1, pady=10, padx=1, ipadx=52)'''
+    main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'green', fg = 'azure', font = ("Comic Sans MS", 10, "bold"))
+    main_backToMainPage_button.grid(row=14, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
 
     # Initial display
     displayMainPageQueryWindowSetUp()
     mainPageQuery()
 
 
-    # things to be implemented
-    #0. ADDING NEW ORDERS NOW HAVE DEFAULT DATE
-    #(DONE) 1.DROPDOWN for status when adding new orders, to choose from "processing", "shipped", "delivered", "other"
-    #(DONE) ADD INVENTORY & ACTIVE ORDERS BUTTON
-    #(DONE) 2.Scroll Bar for all tables
-    #(DONE) HIGHLIGHT COLORS OF BUTTON
-    #(DONE) WIDEN the data for clear visual
-    #(DONE) DOUBLE-CLICK NOWS CAN OPEN WEBSITE FROM CART MENU
     # 3.Connect to csv file by using python  (integrate web crawler to the python)
     # 4.csv file should be corresponding to the implementation for easier import process
     # 5.generate pdf report
-    # 6. (OPTIONAL) advanced query based on user filter (products and vendorprices and orders table only)
-    #(DONE) 7. display orderlines by select a specific order low (either double clicking or an extra option)
-    # 8. low stock alert
-    #(DELETED) 9. sort product by popularity by order history
-    #(DONE)10. display active orders
-    #(DONE) 11.add to cart
 
-    #thins to enhance
-    #(SOLVED) 1. switching tables have some displaying problems
-    # 2. make the colors of the odd and even columns different
-    # 3. (advanced) right-click to select to edit
-
-
-    # ORDERDETAIL NEEDS IMPLEMENTATION
 
     conn.commit()
 
