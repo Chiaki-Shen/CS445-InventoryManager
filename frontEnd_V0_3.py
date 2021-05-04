@@ -1457,10 +1457,17 @@ def MainScreen(tab,root):
             messagebox.showerror("Failed","This cannot be deleted!")
 
     def displayProductsWindowSetUp():
+        # TreeFrame
+        productFrame = Frame(tab)
+        productFrame.grid(row=0, column=0)
+        # TreeView ScrollBar
+        scrollBar = Scrollbar(productFrame, orient=VERTICAL)
+        scrollBar.grid(row=0, column=1, sticky=N + S + W)
+        
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("products", "")
         global display_Products_ContentTree
-        display_Products_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7"), show='headings', height=15)
+        display_Products_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7"), show='headings', height=15, yscrollcommand=scrollBar.set)
         display_Products_ContentTree.column("#1", width=120, minwidth=100, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#1", text="SKU")
         display_Products_ContentTree.column("#2", width=400, minwidth=100, anchor=tk.CENTER)
@@ -1475,15 +1482,23 @@ def MainScreen(tab,root):
         display_Products_ContentTree.heading("#6", text="Reorder Level")
         display_Products_ContentTree.column("#7", width=50, minwidth=50, anchor=tk.CENTER)
         display_Products_ContentTree.heading("#7", text="Stock")
-
-        display_Products_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+        # config scrollbar
+        scrollBar.config(command=display_Products_ContentTree.yview)
+        display_Products_ContentTree.grid(row=0, column=0, pady=20)
         root.geometry("1500x650")
 
     def displayVendorsWindowSetUp():
+        # TreeFrame
+        vendorFrame = Frame(tab)
+        vendorFrame.grid(row=0, column=0)
+        # TreeView ScrollBar
+        scrollBar = Scrollbar(vendorFrame, orient=VERTICAL)
+        scrollBar.grid(row=0, column=1, sticky=N + S + W)
+        
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendors", "")
         global display_Vendors_ContentTree
-        display_Vendors_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"), show='headings', height=15)
+        display_Vendors_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"), show='headings', height=15, yscrollcommand=scrollBar.set)
         display_Vendors_ContentTree.column("#1", width=100, minwidth=70, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#1", text="Vendor Name")
         display_Vendors_ContentTree.column("#2", width=100, minwidth=90, anchor=tk.CENTER)
@@ -1500,11 +1515,19 @@ def MainScreen(tab,root):
         display_Vendors_ContentTree.heading("#7", text="State")
         display_Vendors_ContentTree.column("#8", width=200, minwidth=90, anchor=tk.CENTER)
         display_Vendors_ContentTree.heading("#8", text="Web URL")
-
-        display_Vendors_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+        # config scrollbar
+        scrollBar.config(command=display_Vendors_ContentTree.yview)
+        display_Vendors_ContentTree.grid(row=0, column=0, pady=20)
         root.geometry("1500x650")
 
     def displayOrdersWindowSetUp():
+        # TreeFrame
+        orderFrame = Frame(tab)
+        orderFrame.grid(row=0, column=0)
+        # TreeView ScrollBar
+        scrollBar = Scrollbar(orderFrame, orient=VERTICAL)
+        scrollBar.grid(row=0, column=1, sticky=N + S + W)
+        
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("orders", "")
         global display_Orders_ContentTree
@@ -1519,17 +1542,24 @@ def MainScreen(tab,root):
         display_Orders_ContentTree.heading("#4", text="Total Quantity")
         display_Orders_ContentTree.column("#5", width=200, minwidth=80, anchor=tk.CENTER)
         display_Orders_ContentTree.heading("#5", text="Order Total")
-
-
-        display_Orders_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+        # config scrollbar
+        scrollBar.config(command=display_Orders_ContentTree.yview)
+        display_Orders_ContentTree.grid(row=0, column=0, pady=20)
         root.geometry("1500x650")
 
 
     def displayVendorPricesWindowSetUp():
+        # TreeFrame
+        vendorPricesFrame = Frame(tab)
+        vendorPricesFrame.grid(row=0, column=0)
+        # TreeView ScrollBar
+        scrollBar = Scrollbar(vendorPricesFrame, orient=VERTICAL)
+        scrollBar.grid(row=0, column=1, sticky=N + S + W)
+        
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("vendorPrices", "")
         global display_VendorPrices_ContentTree
-        display_VendorPrices_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings', height=15)
+        display_VendorPrices_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4"), show='headings', height=15, yscrollcommand=scrollBar.set)
         display_VendorPrices_ContentTree.column("#1", width=250, minwidth=150, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#1", text="Vendor")
         display_VendorPrices_ContentTree.column("#2", width=300, minwidth=80, anchor=tk.CENTER)
@@ -1538,17 +1568,23 @@ def MainScreen(tab,root):
         display_VendorPrices_ContentTree.heading("#3", text="Unit List Price")
         display_VendorPrices_ContentTree.column("#4", width=300, minwidth=100, anchor=tk.CENTER)
         display_VendorPrices_ContentTree.heading("#4", text="Time Checked")
+        # config scrollbar
+        scrollBar.config(command=display_VendorPrices_ContentTree.yview)
 
-
-        display_VendorPrices_ContentTree.grid(row=0, column=0, padx=50, pady=20)
+        display_VendorPrices_ContentTree.grid(row=0, column=0, pady=20)
         root.geometry("1500x650")
 
     def displayMainPageQueryWindowSetUp():
-
+        # TreeFrame
+        mainpageFrame = Frame(tab)
+        mainpageFrame.grid(row=0, column=0)
+        # TreeView ScrollBar
+        scrollBar = Scrollbar(mainpageFrame, orient=VERTICAL)
+        scrollBar.grid(row=0, column=1, sticky=N + S + W)
         global tableOndisplay
         tableOndisplay = treeCurrentdisplay("Product on Market", "")
         global mainPageQuery_ContentTree
-        mainPageQuery_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings', height=15)
+        mainPageQuery_ContentTree = ttk.Treeview(tab, column=("c1", "c2", "c3", "c4", "c5"), show='headings', height=15, yscrollcommand=scrollBar.set)
         mainPageQuery_ContentTree.column("#1", width=150, minwidth=80, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#1", text="Vendor")
         mainPageQuery_ContentTree.column("#2", width=150, minwidth=80, anchor=tk.CENTER)
@@ -1559,8 +1595,9 @@ def MainScreen(tab,root):
         mainPageQuery_ContentTree.heading("#4", text="Unit List Price")
         mainPageQuery_ContentTree.column("#5", width=150, minwidth=100, anchor=tk.CENTER)
         mainPageQuery_ContentTree.heading("#5", text="Time Checked")
-        mainPageQuery_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-
+        mainPageQuery_ContentTree.grid(row=0, column=0, pady=20)
+        # config scrollbar
+        scrollBar.config(command=mainPageQuery_ContentTree.yview)
         root.geometry("1500x650")
 
 
