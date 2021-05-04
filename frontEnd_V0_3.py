@@ -1,4 +1,5 @@
 import csv
+import os
 import uuid
 from tkinter import *
 from tkinter import ttk
@@ -17,14 +18,7 @@ def MainScreen(tab, root):
     x = (ws / 2) - (1400 / 2)
     y = (hs / 2) - (1000 / 2)
     conn = sqlite3.connect('Hiccups.db')  # create a DB if there is not one
-    c = conn.cursor()
 
-    # c.execute("Delete from products where prodCode = 'Potato' ")
-    '''
-    c.execute("SELECT * FROM products")
-    display1 = c.fetchall()
-    print(display1)
-    '''
     global currentSelectedTable
     # main option frame declare
     mainOptionFrame = Frame(tab)
@@ -36,7 +30,7 @@ def MainScreen(tab, root):
     mainComboDropdown.current(0)
     mainComboDropdown.bind("<<ComboboxSelected>>")
     # print(mainComboDropdown.get())
-    mainComboDropdown.grid(row=1, column=1, pady=1, padx=1)
+    mainComboDropdown.grid(row=1, column=0, pady=1, padx=1)
 
     # Main Screen sort-By Combo drop down
     mainSortList = ["Price: Low to High", "Price: High to Low", "Alphabetical", "Newest"]
@@ -44,7 +38,7 @@ def MainScreen(tab, root):
     mainSortComboDropdown.current(0)
     mainSortComboDropdown.bind("<<ComboboxSelected>>")
     # print(mainComboDropdown.get())
-    mainSortComboDropdown.grid(row=7, column=1, pady=1, padx=1)
+    mainSortComboDropdown.grid(row=7, column=0, pady=1, padx=1)
 
     class treeCurrentdisplay:
         def __init__(self, currenttable, index):
@@ -323,7 +317,6 @@ def MainScreen(tab, root):
             tree.delete(row)
 
         for row in records:
-            print(row)
             tree.insert("", tk.END, values=row)
 
         conn.commit()
@@ -1303,7 +1296,6 @@ def MainScreen(tab, root):
                 for row in display_Products_ContentTree.get_children():
                     display_Products_ContentTree.delete(row)
                 for row in records:
-                    print(row)
                     display_Products_ContentTree.insert("", tk.END, values=row)
             elif res == 'no':
                 return None
@@ -1565,7 +1557,6 @@ def MainScreen(tab, root):
             display_Products_ContentTree.delete(row)
 
         for row in records:
-            print(row)
             display_Products_ContentTree.insert("", tk.END, values=row)
         conn.commit()
         conn.close()
@@ -1595,7 +1586,6 @@ def MainScreen(tab, root):
                 display_Orders_ContentTree.delete(row)
 
             for row in records:
-                print(row)
                 display_Orders_ContentTree.insert("", tk.END, values=row)
 
         except:
@@ -1636,51 +1626,70 @@ def MainScreen(tab, root):
         res = messagebox.askquestion("Confirm", "It might take a while, are you sure to proceed?")
 
         if res == 'yes':
-            update_products(productlist)
-            df = pd.DataFrame(productlist)
-            df.to_csv('Update.csv')
-            print('Proucts saved to Update.csv')
-            with open('Update.csv', 'rt') as file:
-                data = csv.reader(file)
-                now = datetime.now()
-                now = now.strftime("%Y-%m-%d %H:%M:%S")
+            if os.path.exists("Update.csv"):
+                os.remove("Update.csv")
+                update_products(productlist)
+                df = pd.DataFrame(productlist)
+                df.to_csv('Update.csv')
+                print('Proucts saved to Update.csv')
+                with open('Update.csv', 'rt') as file:
+                    data = csv.reader(file)
+                    now = datetime.now()
+                    now = now.strftime("%Y-%m-%d %H:%M:%S")
 
-                for row in data:
-                    try:
+                    for row in data:
+                        try:
 
-                        c.execute('''UPDATE vendorPrices 
-                                        SET 
-                                            unitListPrice = :unitPrice, 
-                                            timeChecked = :time 
-                                        WHERE SKU = :sku''',
-                                  {
-                                      'unitPrice': row[2],
-                                      'time': now,
-                                      'sku': row[1]
-                                  })
-                        print(row)
+                            c.execute('''UPDATE vendorPrices 
+                                            SET 
+                                                unitListPrice = :unitPrice, 
+                                                timeChecked = :time 
+                                            WHERE SKU = :sku''',
+                                      {
+                                          'unitPrice': row[2],
+                                          'time': now,
+                                          'sku': row[1]
+                                      })
 
-                    except:
-                        continue
-                displayMainPageQueryWindowSetUp()
-                mainPageQuery()
-                messagebox.showinfo("Success", "Prices are updated")
-        elif res == 'no':
-            return None
-        else:
-            messagebox.showerror("Error", "Something went wrong!")
+                        except:
+                            continue
+                    messagebox.showinfo("Success", "Prices are updated")
+            elif res == 'no':
+                return None
+            else:
+                messagebox.showerror("Error", "Something went wrong!")
+
         conn.commit()
+        conn.close()
+        displayMainPageQueryWindowSetUp()
+        mainPageQuery()
 
+
+    def searchData():
+        treeRemove()
+        displayProductsWindowSetUp()
+
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        c.execute("SELECT *" + " FROM products WHERE prodDesc LIKE (?)", ('%'+searchbox.get()+'%',))
+        records = c.fetchall()
+
+        for row in display_Products_ContentTree.get_children():
+            display_Products_ContentTree.delete(row)
+
+        for row in records:
+            display_Products_ContentTree.insert("", tk.END, values=row)
+        conn.commit()
         conn.close()
 
-    # Main Screen Labels
-    main_table_select_label = Label(mainOptionFrame, text="Choose Table")
-    main_table_select_label.grid(row=1, column=0, pady=10, padx=1)
+
+
+
 
     # Display table button in Main screen
     main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand, bg='light gray',
                                  fg='black')
-    main_select_display.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=83)
+    main_select_display.grid(row=1, column=1, columnspan=2, pady=10, padx=1, ipadx=40)
 
     # Insert data button in Main screen
     main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand, bg='light gray',
@@ -1697,12 +1706,8 @@ def MainScreen(tab, root):
                                 fg='black')
     main_delete_button.grid(row=6, column=0, columnspan=2, pady=10, padx=1, ipadx=55)
 
-    # Sort button in Main Screen
-    main_sortBy_label = Label(mainOptionFrame, text="Sort by")
-    main_sortBy_label.grid(row=7, column=0)
-
     main_sort_button = Button(mainOptionFrame, text="Sort", command=sortCommand, bg='light gray', fg='black')
-    main_sort_button.grid(row=8, column=0, columnspan=2, pady=10, padx=1, ipadx=112)  # row 6 is left for drop down
+    main_sort_button.grid(row=7, column=1, columnspan=1, pady=10, padx=1, ipadx=60)  # row 6 is left for drop down
 
     check_stock_button = Button(mainOptionFrame, text="Inventory", command=queryStock, bg='light gray', fg='black')
     check_stock_button.grid(row=10, column=0, columnspan=2, pady=10, padx=1, ipadx=100)
@@ -1711,8 +1716,8 @@ def MainScreen(tab, root):
                                         bg='light gray', fg='black')
     check_active_orders_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
 
-    add_cart_button = Button(mainOptionFrame, text="Update Prices", command=update, bg='light gray', fg='black')
-    add_cart_button.grid(row=12, column=0, columnspan=2, pady=10, padx=1, ipadx=52)
+    add_cart_button = Button(root, text="Update Prices", command=update, bg='green', fg='white')
+    add_cart_button.grid(row=1, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
 
     add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart, bg='light gray', fg='black')
     add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
@@ -1731,15 +1736,16 @@ def MainScreen(tab, root):
                                         bg='green', fg='azure', font=("Comic Sans MS", 10, "bold"))
     main_backToMainPage_button.grid(row=15, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
 
+    global searchbox
+    searchbox = Entry(mainOptionFrame, width=30)
+    searchbox.grid(row=0, column=0, padx=20, pady=(10, 0))
+    searchbox.insert(0, "Enter here to search")
+    option_Add_btn = Button(mainOptionFrame, text="Search", command=searchData, bg='green', fg='white')
+    option_Add_btn.grid(row=0, column=1, columnspan=1, pady=10, padx=1, ipadx=60)
+
     # Initial display
     displayMainPageQueryWindowSetUp()
     mainPageQuery()
 
-    # 3.Connect to csv file by using python  (integrate web crawler to the python)
-    # 4.csv file should be corresponding to the implementation for easier import process
-    # 5.generate pdf report
-
     conn.commit()
-
-    # Close our connection
     conn.close()
