@@ -1,12 +1,14 @@
+import csv
 import uuid
 from tkinter import *
 from tkinter import ttk
 import tkinter as tk
 import sqlite3
-from datetime import date
+from datetime import date, datetime, time
 from tkinter import messagebox
 import webbrowser
-
+import requests
+import pandas as pd
 
 
 def MainScreen(tab,root):
@@ -629,7 +631,7 @@ def MainScreen(tab,root):
                             INNER JOIN vendorPrices vP on v.vendorName = vP.vendorName
                             INNER JOIN products p on p.SKU = vP.SKU
                     GROUP BY v.vendorName, p.prodDesc, unitListPrice, timeChecked
-                    ORDER BY prodDesc''')
+                    ORDER BY vendorPriceID''')
         records = c.fetchall()
 
         for row in display_VendorPrices_ContentTree.get_children():
@@ -1475,7 +1477,7 @@ def MainScreen(tab,root):
         display_Products_ContentTree.heading("#7", text="Stock")
 
         display_Products_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1500x600")
+        root.geometry("1500x650")
 
     def displayVendorsWindowSetUp():
         global tableOndisplay
@@ -1500,7 +1502,7 @@ def MainScreen(tab,root):
         display_Vendors_ContentTree.heading("#8", text="Web URL")
 
         display_Vendors_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1500x600")
+        root.geometry("1500x650")
 
     def displayOrdersWindowSetUp():
         global tableOndisplay
@@ -1520,7 +1522,7 @@ def MainScreen(tab,root):
 
 
         display_Orders_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1500x600")
+        root.geometry("1500x650")
 
 
     def displayVendorPricesWindowSetUp():
@@ -1539,7 +1541,7 @@ def MainScreen(tab,root):
 
 
         display_VendorPrices_ContentTree.grid(row=0, column=0, padx=50, pady=20)
-        root.geometry("1500x600")
+        root.geometry("1500x650")
 
     def displayMainPageQueryWindowSetUp():
 
@@ -1559,7 +1561,7 @@ def MainScreen(tab,root):
         mainPageQuery_ContentTree.heading("#5", text="Time Checked")
         mainPageQuery_ContentTree.grid(row=0, column=0, padx=50, pady=20)
 
-        root.geometry("1500x600")
+        root.geometry("1500x650")
 
 
 
@@ -1616,6 +1618,73 @@ def MainScreen(tab,root):
         conn.close()
         display_Orders_ContentTree.bind('<Double-1>', doubleClickedOrdersDetails)
 
+    def update_products(output):
+        for x in range(1, 50):
+
+            url = 'https://bestwareshop.com/products.json?limit=250&page=' + str(x)
+            r = requests.get(url)
+
+            data = r.json()
+
+            for item in data['products']:
+                for variant in item['variants']:
+                    sku = variant['sku']
+                    price = variant['price']
+
+                    product = {
+                        'sku': sku,
+                        'price': price,
+                    }
+
+                    output.append(product)
+
+            data.clear()
+        return output
+
+    def update():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        productlist = []
+
+        res = messagebox.askquestion("Confirm", "It might take a while, are you sure to proceed?")
+
+        if res == 'yes':
+            update_products(productlist)
+            df = pd.DataFrame(productlist)
+            df.to_csv('Update.csv')
+            print('Proucts saved to Update.csv')
+            with open('Update.csv', 'rt') as file:
+                data = csv.reader(file)
+                now = datetime.now()
+                now = now.strftime("%Y-%m-%d %H:%M:%S")
+
+                for row in data:
+                    try:
+
+                        c.execute('''UPDATE vendorPrices 
+                                        SET 
+                                            unitListPrice = :unitPrice, 
+                                            timeChecked = :time 
+                                        WHERE SKU = :sku''',
+                                  {
+                                      'unitPrice': row[2],
+                                      'time': now,
+                                      'sku': row[1]
+                                  })
+                        print(row)
+
+                    except:
+                        continue
+                displayMainPageQueryWindowSetUp()
+                mainPageQuery()
+                messagebox.showinfo("Success", "Prices are updated")
+        elif res == 'no':
+            return None
+        else:
+            messagebox.showerror("Error", "Something went wrong!")
+        conn.commit()
+
+        conn.close()
 
     # Main Screen Labels
     main_table_select_label = Label(mainOptionFrame, text="Choose Table")
@@ -1650,20 +1719,24 @@ def MainScreen(tab,root):
     check_active_orders_button = Button(mainOptionFrame, text="Active Orders", command=queryActiveOrders, bg = 'light gray', fg = 'black')
     check_active_orders_button.grid(row=11, column=0, columnspan=2, pady=10, padx=1, ipadx=90)
 
+    add_cart_button = Button(mainOptionFrame, text="Update Prices", command=update, bg='light gray', fg='black')
+    add_cart_button.grid(row=12, column=0, columnspan=2, pady=10, padx=1, ipadx=52)
+
     add_cart_button = Button(mainOptionFrame, text="Add Cart", command=addCart, bg='light gray', fg='black')
-    add_cart_button.grid(row=12, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
+    add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=55)
 
     add_cart_button = Button(mainOptionFrame, text="Clear Cart", command=newCart, bg='light gray', fg='black')
-    add_cart_button.grid(row=12, column=1, columnspan=1, pady=10, padx=1, ipadx=55)
+    add_cart_button.grid(row=13, column=1, columnspan=1, pady=10, padx=1, ipadx=55)
 
     add_cart_button = Button(mainOptionFrame, text="Show Cart", command=DisplayCartWindowPopUp, bg='light gray', fg='black')
-    add_cart_button.grid(row=13, column=0, columnspan=1, pady=10, padx=1, ipadx=52)
+    add_cart_button.grid(row=14, column=0, columnspan=1, pady=10, padx=1, ipadx=52)
 
     add_cart_button = Button(mainOptionFrame, text="Place Order", command=PlaceOrder, bg='light gray', fg='black')
-    add_cart_button.grid(row=13, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
+    add_cart_button.grid(row=14, column=1, columnspan=1, pady=10, padx=1, ipadx=52)
 
     main_backToMainPage_button = Button(mainOptionFrame, text="Back to Summary Table", command=backToSummaryDisplay, bg = 'green', fg = 'azure', font = ("Comic Sans MS", 10, "bold"))
-    main_backToMainPage_button.grid(row=14, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
+    main_backToMainPage_button.grid(row=15, column=0, columnspan=2, pady=10, padx=1, ipadx=60)
+
 
     # Initial display
     displayMainPageQueryWindowSetUp()
