@@ -1654,6 +1654,7 @@ def MainScreen(tab, root):
                         except:
                             continue
                     messagebox.showinfo("Success", "Prices are updated")
+
             elif res == 'no':
                 return None
             else:
@@ -1682,14 +1683,73 @@ def MainScreen(tab, root):
         conn.commit()
         conn.close()
 
+    def getNewBestwareCSV():
+        import shopify_scraper
+        if os.path.exists("Bestware.csv"):
+            os.remove("Bestware.csv")
+            productlist = []
+            shopify_scraper.get_bestware_products(productlist)
+            df = pd.DataFrame(productlist)
+            df.to_csv('Bestware.csv')
+            print('Proucts saved to Bestware.csv')
 
+    def insertNew():
+        conn = sqlite3.connect('Hiccups.db')
+        c = conn.cursor()
+        res = messagebox.askquestion("Confirm", "It might take a while, are you sure to proceed?")
 
+        if res == 'yes':
+            getNewBestwareCSV()
+            with open('Bestware.csv', 'r', encoding='utf-8') as file:
+                data = csv.reader(file)
+                for row in data:
+                    try:
+                        c.execute('''INSERT INTO products(:sku, :proddesc, :producturl, :quantity, :availability, 
+                                                          :reorderlevel, :unitsinstock)''',
+                                  {
+                                      'sku': row[4],
+                                      'proddesc': row[1],
+                                      'producturl': row[2],
+                                      'quantity': row[5],
+                                      'availability': row[6],
+                                      'reorderlevel': 0,
+                                      'unitsinstock': 0,
+                                  })
+
+                        uid_str = uuid.uuid4().urn
+                        Id = uid_str[9:]
+
+                        c.execute('''INSERT INTO vendorPrices(:vendorPriceID, :vendorName, :SKU, :unitListPrice) ''',
+                                  {
+                                      'vendorPriceID': Id,
+                                      'vendorName': 'Bestware',
+                                      'SKU': row[4],
+                                      'unitListPrice': row[3],
+                                  })
+
+                    except:
+                        continue
+                messagebox.showinfo("Success", "New Products Added! (If Any).")
+
+        elif res == 'no':
+            return None
+        else:
+            messagebox.showerror("Error", "Something went wrong!")
+
+        conn.commit()
+        conn.close()
+        displayMainPageQueryWindowSetUp()
+        mainPageQuery()
 
 
     # Display table button in Main screen
     main_select_display = Button(mainOptionFrame, text="Display Table", command=displayCommand, bg='light gray',
                                  fg='black')
     main_select_display.grid(row=1, column=1, columnspan=2, pady=10, padx=1, ipadx=40)
+
+    main_insert_button = Button(mainOptionFrame, text="Check New Products", command=insertNew, bg='light gray',
+                                fg='black')
+    main_insert_button.grid(row=2, column=0, columnspan=2, pady=10, padx=1, ipadx=70)
 
     # Insert data button in Main screen
     main_insert_button = Button(mainOptionFrame, text="Add Data to Table", command=addCommand, bg='light gray',
