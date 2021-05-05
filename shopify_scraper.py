@@ -6,7 +6,6 @@ import pandas as pd
 
 
 def get_bestware_products(output):
-    #productlist = []
 
     for x in range(1, 50):
 
@@ -35,3 +34,10 @@ def get_bestware_products(output):
 
                 output.append(product)
 
+def get(productlist):
+    get_bestware_products(productlist)
+    if os.path.exists("Bestware.csv"):
+        os.remove("Bestware.csv")
+        df = pd.DataFrame(productlist)
+        df.to_csv('Bestware.csv')
+        print('Proucts saved to Bestware.csv')
