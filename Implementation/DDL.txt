@@ -109,8 +109,22 @@ create table products(
  --- CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
 );
 
+create table shoppingList(
+  SKU VARCHAR (25) NOT NULL,
+ --- category VARCHAR (50) DEFAULT 'N/A',
+  prodDesc VARCHAR NOT NULL,
+  productURL VARCHAR,
+  quantity VARCHAR (10) NOT NULL,
+  availability VARCHAR(10) NOT NULL,
+  reorderLevel double DEFAULT 'N/A',
+  unitsInStock double DEFAULT 0,
+  CONSTRAINT products_pk PRIMARY KEY (SKU)
+ --- CONSTRAINT categories_products_fk FOREIGN KEY (category) REFERENCES categories(categoryName)
+);
+DROP TABLE shoppingList;
 
 
+DROP TABLE IF EXISTS vendorPrices;
 create table vendorPrices(
     vendorPriceID INTEGER NOT NULL,
     vendorName VARCHAR(50),
@@ -118,6 +132,7 @@ create table vendorPrices(
     unitListPrice DOUBLE NOT NULL,
     timeChecked DateTime DEFAULT CURRENT_TIMESTAMP NOT NULL,
     CONSTRAINT vendorPrices_pk PRIMARY KEY (vendorPriceID),
+    CONSTRAINT vendorPrices_ck UNIQUE(SKU, unitListPrice, timeChecked),
     CONSTRAINT products_vendorPrices_fk FOREIGN KEY (SKU) REFERENCES products(SKU),
     CONSTRAINT vendors_vendorPrices_fk FOREIGN KEY (vendorName) REFERENCES vendors(vendorName)
 );
@@ -148,6 +163,7 @@ CREATE TABLE orderLines(
 );
 ---INSERT INTO categories VALUES ('Restaurant Supply');
 INSERT INTO vendors VALUES('Bestware', '+17147758082', 'support@bestware.com','10161 Bolsa Ave # 103C', 'https://bestware.com/', 92683);
+INSERT INTO vendors VALUES('Lollicup', '+16269658882', 'support@bestware.com','10161 Bolsa Ave # 103C', 'www.lollicupstore.com', 92683);
 INSERT INTO zipLocations VALUES (92683,'Westminster','CA');
 
 --- ORDERLINE SUBTOTAL
@@ -162,25 +178,29 @@ GROUP BY o.orderID, oL.SKU;
 
 
 -- Show Order Total Sum
-SELECT SUM(unitListPrice * itemQuantity)
+SELECT SUM(DISTINCT unitListPrice * itemQuantity)
     FROM orders o
         INNER JOIN orderLines oL on o.orderId = oL.orderId
         INNER JOIN products p on p.SKU = oL.SKU
         INNER JOIN vendorPrices vP on p.SKU = vP.SKU
-WHERE o.orderId = '010a5635-c0f3-496a-b20f-397d6cdbfa83'
-GROUP BY o.orderID;
+WHERE o.orderId = '010a5635-c0f3-496a-b20f-397d6cdbfa83';
+
 
 --- ORDER TOTALS
 SELECT o.orderID, o.orderDate, o.orderStatus,
-        (SELECT COUNT(oL.sku)
+       (SELECT COUNT(oL.SKU)
             FROM orderLines oL
-        WHERE o.orderId =oL.orderId )AS number_of_items,
+        WHERE o.orderId =oL.orderId )AS "Product Type",
+        (SELECT SUM(oL.itemQuantity)
+            FROM orderLines oL
+        WHERE o.orderId =oL.orderId )AS "Total Quantity",
        ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
     FROM orders o
         INNER JOIN orderLines oL on o.orderId = oL.orderId
         INNER JOIN products p on p.SKU = oL.SKU
         INNER JOIN vendorPrices vP on p.SKU = vP.SKU
 GROUP BY o.orderID, o.orderDate
+ORDER BY o.orderDate;
 
 
 SELECT SKU, prodDesc, productURL, quantity, reorderLevel, unitsInStock
@@ -191,6 +211,52 @@ WHERE availability LIKE 'TRUE';
 SELECT SKU, prodDesc, productURL, quantity, reorderLevel, unitsInStock
     FROM products
 WHERE unitsInStock != 0;
+
+
+
+SELECT COUNT(oL.sku)
+            FROM orderLines oL
+    INNER JOIN orders o on o.orderId = oL.orderId
+WHERE o.orderId =oL.orderId
+
+
+SELECT o.orderID, o.orderDate, o.orderStatus,
+        (SELECT SUM(oL.itemQuantity)
+            FROM orderLines oL
+        WHERE o.orderId =oL.orderId )AS "Total Quantity",
+       ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+    FROM orders o
+        INNER JOIN orderLines oL on o.orderId = oL.orderId
+        INNER JOIN products p on p.SKU = oL.SKU
+        INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+GROUP BY o.orderID, o.orderDate
+ORDER BY o.orderDate;
+
+
+SELECT o.orderID, o.orderDate, o.orderStatus,
+        (SELECT SUM(oL.itemQuantity)
+            FROM orderLines oL
+        WHERE o.orderId =oL.orderId )AS "Total Quantity",
+       ROUND(SUM(unitListPrice * oL.itemQuantity)/2, 2) AS total
+    FROM orders o
+        INNER JOIN orderLines oL on o.orderId = oL.orderId
+        INNER JOIN products p on p.SKU = oL.SKU
+        INNER JOIN vendorPrices vP on p.SKU = vP.SKU
+WHERE orderStatus != 'Delivered'
+GROUP BY o.orderID, o.orderDate
+ORDER BY o.orderDate;
+
+DROP TABLE IF EXISTS cart;
+CREATE TABLE cart(
+      SKU VARCHAR (25) NOT NULL,
+      prodDesc VARCHAR NOT NULL,
+      productURL VARCHAR,
+      unitsInStock double DEFAULT 0,
+      Quantity double DEFAULT 1,
+      unitPrice double,
+      totalPrice double,
+      CONSTRAINT products_pk PRIMARY KEY (SKU)
+);
 
 
 
