@@ -30,6 +30,7 @@ If the application failed to start or any unforeseen incident happens, try to do
 	6. It will take some take time to generate the executable. Once it's finished, simply open the dist folder and run the executable.
 
 Note: Check out the link below for more standard installation
+
 Reference Link: https://datatofish.com/executable-pyinstaller/
 
 # Contributing
