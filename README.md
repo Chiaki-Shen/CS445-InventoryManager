@@ -34,15 +34,15 @@ Reference Link: https://datatofish.com/executable-pyinstaller/
 
 # Contributing
 
-Binkang Yu: https://github.com/binkang666
+Binkang Yu: https://github.com/binkang666 (Front End & Back End)
 
-Yiang Shen: https://github.com/Chiaki-Shen
+Yiang Shen: https://github.com/Chiaki-Shen (Front End & Back End)
 
-John Bui: https://github.com/jbui80
+John Bui: https://github.com/jbui80 (Web Crawler)
 
-Fabian Nunez: https://github.com/seakr1948
+Fabian Nunez: https://github.com/seakr1948 (Front End)
 
-Johnson Huynh: Johnson.huynh@student.Csulb.edu
+Johnson Huynh: Johnson.huynh@student.Csulb.edu (Back End)
 
 
 # MIT License
