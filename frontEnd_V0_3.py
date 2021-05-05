@@ -499,9 +499,10 @@ def MainScreen(tab, root):
         for row in records:
             # print(row)
             display_Products_ContentTree.insert("", tk.END, values=row)
+
         conn.commit()
         conn.close()
-        lowStockAlert()
+
 
     def queryVendors():
         conn = sqlite3.connect('Hiccups.db')
@@ -783,18 +784,21 @@ def MainScreen(tab, root):
         c = conn.cursor()
         uid_str = uuid.uuid4().urn
         id = uid_str[9:]
-        c.execute("INSERT INTO vendorPrices VALUES (:price, :vendor,:product,:unitPrice, :timecheck)",
+        now = datetime.now()
+        now = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        c.execute("INSERT INTO vendorPrices VALUES (:id, :vendor, :product, :unitPrice, :timecheck)",
                   {
-                      'price': id,
+                      'id': id,
                       'vendor': vendorPricebox2.get(),
                       'product': vendorPricebox3.get(),
                       'unitPrice': vendorPricebox4.get(),
-                      'timecheck': vendorPricebox5.get(),
+                      'timecheck': now
                   })
         vendorPricebox2.delete(0, END)
         vendorPricebox3.delete(0, END)
         vendorPricebox4.delete(0, END)
-        vendorPricebox5.delete(0, END)
+
 
         conn.commit()
         conn.close()
@@ -883,6 +887,7 @@ def MainScreen(tab, root):
             conn.close()
             queryProducts()
         except sqlite3.Error as e:
+            messagebox.showerror("Failed", "It cannot be deleted in this mode, please switch table and try again")
             print("Failed to update", e)
         # this line below has to be out of try statement
         productsEdit.destroy()
@@ -1147,9 +1152,7 @@ def MainScreen(tab, root):
         global vendorPricebox4
         vendorPricebox4 = Entry(vendorPriceAdd, width=30)  # vender
         vendorPricebox4.grid(row=5, column=1, padx=20, pady=(10, 0))
-        global vendorPricebox5
-        vendorPricebox5 = Entry(vendorPriceAdd, width=30)  # vender
-        vendorPricebox5.grid(row=6, column=1, padx=20, pady=(10, 0))
+
         # Create labels for display
         # vendorPricebox1_label = Label(vendorPriceAdd, text="vendorPriceID")
         # vendorPricebox1_label.grid(row=2, column=0, padx=20, pady=(10, 0))
@@ -1159,8 +1162,6 @@ def MainScreen(tab, root):
         vendorPricebox3_label.grid(row=4, column=0, padx=20)
         vendorPricebox4_label = Label(vendorPriceAdd, text="unit List Price")
         vendorPricebox4_label.grid(row=5, column=0, padx=20)
-        vendorPricebox5_label = Label(vendorPriceAdd, text="Time Checked")
-        vendorPricebox5_label.grid(row=6, column=0, padx=20)
 
         option_Add_btn = Button(vendorPriceAdd, text="Add to Vendor Price List", command=submitAddVendorPrices)
         option_Add_btn.grid(row=7, column=0, columnspan=2, pady=10, padx=20, ipadx=100)
@@ -1558,9 +1559,10 @@ def MainScreen(tab, root):
 
         for row in records:
             display_Products_ContentTree.insert("", tk.END, values=row)
+        lowStockAlert()
         conn.commit()
         conn.close()
-        lowStockAlert()
+
 
     def queryActiveOrders():
         treeRemove()
@@ -1628,19 +1630,19 @@ def MainScreen(tab, root):
         if res == 'yes':
             if os.path.exists("Update.csv"):
                 os.remove("Update.csv")
-                update_products(productlist)
-                df = pd.DataFrame(productlist)
-                df.to_csv('Update.csv')
-                print('Proucts saved to Update.csv')
-                with open('Update.csv', 'rt') as file:
-                    data = csv.reader(file)
-                    now = datetime.now()
-                    now = now.strftime("%Y-%m-%d %H:%M:%S")
+            update_products(productlist)
+            df = pd.DataFrame(productlist)
+            df.to_csv('Update.csv')
+            print('Proucts saved to Update.csv')
+            with open('Update.csv', 'rt') as file:
+                data = csv.reader(file)
+                now = datetime.now()
+                now = now.strftime("%Y-%m-%d %H:%M:%S")
 
-                    for row in data:
-                        try:
+                for row in data:
+                    try:
 
-                            c.execute('''UPDATE vendorPrices 
+                        c.execute('''UPDATE vendorPrices 
                                             SET 
                                                 unitListPrice = :unitPrice, 
                                                 timeChecked = :time 
@@ -1651,14 +1653,14 @@ def MainScreen(tab, root):
                                           'sku': row[1]
                                       })
 
-                        except:
-                            continue
-                    messagebox.showinfo("Success", "Prices are updated")
+                    except:
+                        continue
+                messagebox.showinfo("Success", "Prices are updated")
 
-            elif res == 'no':
-                return None
-            else:
-                messagebox.showerror("Error", "Something went wrong!")
+        elif res == 'no':
+            return None
+        else:
+            messagebox.showerror("Error", "Something went wrong!")
 
         conn.commit()
         conn.close()
@@ -1687,12 +1689,12 @@ def MainScreen(tab, root):
         import shopify_scraper
         if os.path.exists("Bestware.csv"):
             os.remove("Bestware.csv")
-            productlist = []
-            shopify_scraper.get_bestware_products(productlist)
-            shopify_scraper.get(productlist)
-            df = pd.DataFrame(productlist)
-            df.to_csv('Bestware.csv')
-            print('Proucts saved to Bestware.csv')
+        productlist = []
+        shopify_scraper.get_bestware_products(productlist)
+        shopify_scraper.get(productlist)
+        df = pd.DataFrame(productlist)
+        df.to_csv('Bestware.csv')
+        print('Proucts saved to Bestware.csv')
 
     def insertNew():
         conn = sqlite3.connect('Hiccups.db')
@@ -1702,32 +1704,38 @@ def MainScreen(tab, root):
         if res == 'yes':
             getNewBestwareCSV()
             with open('Bestware.csv', 'r', encoding='utf-8') as file:
+
                 data = csv.reader(file)
+
+
                 for row in data:
                     try:
-                        c.execute('''INSERT INTO products(:sku, :proddesc, :producturl, :quantity, :availability, 
-                                                          :reorderlevel, :unitsinstock)''',
+                        c.execute("INSERT INTO products VALUES (:sku,:desc,:url, :quan, :avail, :level, :stock)",
                                   {
-                                      'sku': row[4],
-                                      'proddesc': row[1],
-                                      'producturl': row[2],
-                                      'quantity': row[5],
-                                      'availability': row[6],
-                                      'reorderlevel': 0,
-                                      'unitsinstock': 0,
+                                      'sku':  row[4],
+                                      'desc': row[1],
+                                      'url': row[2],
+                                      'quan': row[5],
+                                      'avail': row[6],
+                                      'level': 0,
+                                      'stock': 0,
                                   })
-
                         uid_str = uuid.uuid4().urn
                         Id = uid_str[9:]
+                        now = datetime.now()
+                        now = now.strftime("%Y-%m-%d %H:%M:%S")
 
-                        c.execute('''INSERT INTO vendorPrices(:vendorPriceID, :vendorName, :SKU, :unitListPrice) ''',
+                        c.execute("INSERT INTO vendorPrices VALUES (:price, :vendor,:product,:unitPrice, :timecheck)",
                                   {
-                                      'vendorPriceID': Id,
-                                      'vendorName': 'Bestware',
-                                      'SKU': row[4],
-                                      'unitListPrice': row[3],
+                                      'price': Id,
+                                      'vendor': "Bestware",
+                                      'product': row[4],
+                                      'unitPrice': row[3],
+                                      'timecheck': now
                                   })
 
+                        c.execute("DELETE FROM products WHERE SKU = 'sku' ")
+                        c.execute("DELETE FROM vendorPrices WHERE SKU = 'sku' ")
                     except:
                         continue
                 messagebox.showinfo("Success", "New Products Added! (If Any).")
