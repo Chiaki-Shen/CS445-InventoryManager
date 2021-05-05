@@ -1689,6 +1689,7 @@ def MainScreen(tab, root):
             os.remove("Bestware.csv")
             productlist = []
             shopify_scraper.get_bestware_products(productlist)
+            shopify_scraper.get(productlist)
             df = pd.DataFrame(productlist)
             df.to_csv('Bestware.csv')
             print('Proucts saved to Bestware.csv')
