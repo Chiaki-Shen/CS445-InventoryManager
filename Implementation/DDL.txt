@@ -163,7 +163,6 @@ CREATE TABLE orderLines(
 );
 ---INSERT INTO categories VALUES ('Restaurant Supply');
 INSERT INTO vendors VALUES('Bestware', '+17147758082', 'support@bestware.com','10161 Bolsa Ave # 103C', 'https://bestware.com/', 92683);
-INSERT INTO vendors VALUES('Lollicup', '+16269658882', 'support@bestware.com','10161 Bolsa Ave # 103C', 'www.lollicupstore.com', 92683);
 INSERT INTO zipLocations VALUES (92683,'Westminster','CA');
 
 --- ORDERLINE SUBTOTAL
