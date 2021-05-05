@@ -35,9 +35,13 @@ Reference Link: https://datatofish.com/executable-pyinstaller/
 # Contributing
 
 Binkang Yu: https://github.com/binkang666
+
 Yiang Shen: https://github.com/Chiaki-Shen
+
 John Bui: https://github.com/jbui80
+
 Fabian Nunez: https://github.com/seakr1948
+
 Johnson Huynh: Johnson.huynh@student.Csulb.edu
 
 
