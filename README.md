@@ -12,6 +12,7 @@ To Run the Hiccups Inventory app, simply clicks on Hiccups Inventory.exe
 # Installation (If failed to start)
 
 If the application failed to start or any unforeseen incident happens, try to do the following steps to run:
+
 	1. Delete Hiccups Inventory.exe
 	2. In the Windows Command Prompt, type the following command to install the pyinstaller package (and then press Enter):
 
