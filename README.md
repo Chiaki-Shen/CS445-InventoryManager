@@ -39,7 +39,7 @@ Fabian Nunez: https://github.com/seakr1948
 Johnson Huynh: Johnson.huynh@student.Csulb.edu
 
 
-#MIT License
+# MIT License
 
 Copyright (c) [2021] [Hiccups Inventory]
 
