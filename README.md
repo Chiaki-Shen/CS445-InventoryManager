@@ -4,7 +4,7 @@ Hiccups Inventory is a desktop application that combines inventory management wi
 
 
 
-To Run the Hiccups Inventory app, simply clicks on Hiccups Inventory.exe
+To Run the Hiccups Inventory app, simply clicks on Hiccups Inventory.exe (Note: Hiccups Inventory.exe can only be run when the Hicuups.db file is in the same directory.) 
 
 
 
