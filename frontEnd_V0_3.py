@@ -1656,7 +1656,8 @@ def MainScreen(tab, root):
                     except:
                         continue
                 messagebox.showinfo("Success", "Prices are updated")
-
+            if os.path.exists("Update.csv"):
+                os.remove("Update.csv")
         elif res == 'no':
             return None
         else:
@@ -1736,10 +1737,12 @@ def MainScreen(tab, root):
 
                         c.execute("DELETE FROM products WHERE SKU = 'sku' ")
                         c.execute("DELETE FROM vendorPrices WHERE SKU = 'sku' ")
+
                     except:
                         continue
                 messagebox.showinfo("Success", "New Products Added! (If Any).")
-
+            if os.path.exists("Bestware.csv"):
+                os.remove("Bestware.csv")
         elif res == 'no':
             return None
         else:
